@@ -149,6 +149,24 @@ Server ortamınıza göre yapılandırın.
 `appsettings.json` veya güvenli kullanıcı sırları üzerinden bağlantı
 bilgilerinizi tanımlayın.
 
+#### JWT anahtarı (zorunlu)
+
+JWT imzalama anahtarı repoda **tutulmaz**; tanımlanmazsa uygulama
+başlamaz. En az 32 bayt uzunluğunda rastgele bir anahtar üretin:
+
+``` bash
+openssl rand -base64 64
+```
+
+Geliştirme ortamında `AileGaraj.Api` klasöründe user-secrets ile
+tanımlayın:
+
+``` bash
+dotnet user-secrets set "Jwt:Key" "<ürettiğiniz-anahtar>"
+```
+
+Üretim ortamında aynı değeri `Jwt__Key` ortam değişkeni ile verin.
+
 ### 3. Veritabanını hazırlayın
 
 Backend klasörüne geçin:

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using AileGaraj.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,8 +20,10 @@ public class SessionValidationMiddleware
 		if (context.User.Identity?.IsAuthenticated == true)
 		{
 			var sessionClaim = context.User.FindFirst("sid")?.Value;
+			var tokenUserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-			if (!int.TryParse(sessionClaim, out var sessionId))
+			if (!int.TryParse(sessionClaim, out var sessionId) ||
+				string.IsNullOrEmpty(tokenUserId))
 			{
 				context.Response.StatusCode = StatusCodes.Status401Unauthorized;
 				return;
@@ -28,10 +31,14 @@ public class SessionValidationMiddleware
 
 			var now = DateTime.UtcNow;
 
+			// Oturum, token'daki kullanıcıya ait olmalıdır. Yalnızca oturum
+			// numarasına bakmak, başka bir kullanıcının oturumuyla imzalı
+			// token kullanılmasına izin verirdi.
 			var session = await db.ActiveSessions
 				.Include(x => x.User)
 				.FirstOrDefaultAsync(x =>
 					x.Id == sessionId &&
+					x.UserId == tokenUserId &&
 					x.RevokedAt == null);
 
 			if (session == null ||
