@@ -44,8 +44,29 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 .AddDefaultTokenProviders();
 
 // JWT yapılandırması
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("JWT anahtarı bulunamadı.");
+// Anahtar repoda tutulmaz: geliştirmede `dotnet user-secrets`, üretimde
+// ortam değişkeni (Jwt__Key) ile verilir. Ayrıntı için README'ye bakın.
+var jwtKey = builder.Configuration["Jwt:Key"];
+
+if (string.IsNullOrWhiteSpace(jwtKey))
+    throw new InvalidOperationException(
+        "JWT anahtarı bulunamadı. 'Jwt:Key' değerini user-secrets veya " +
+        "ortam değişkeni (Jwt__Key) ile tanımlayın.");
+
+// HS256 için en az 256 bit (32 bayt) gerekir.
+if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
+    throw new InvalidOperationException(
+        "JWT anahtarı en az 32 bayt (256 bit) uzunluğunda olmalıdır.");
+
+// Daha önce public repoda yayınlanmış anahtar artık güvenli değildir;
+// yanlışlıkla tekrar kullanılırsa uygulama açılmasın.
+const string leakedJwtKey =
+    "1tFTKaEXtNIIawoKwyUXtw3PKkF1xnybVtDQt55cDLRMCylhjsU8VbwlLIRPyW1GCkBMMgCp+7FzQbHIZ1/VuQ==";
+
+if (jwtKey == leakedJwtKey)
+    throw new InvalidOperationException(
+        "Bu JWT anahtarı daha önce repoda yayınlandı ve güvenli değil. " +
+        "Yeni bir anahtar üretin (ör. 'openssl rand -base64 64').");
 
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException("JWT Issuer bulunamadı.");

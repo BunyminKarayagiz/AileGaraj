@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using AileGaraj.Api.Filters;
+using Microsoft.Data.SqlClient;
+using System.Data;
 
 namespace AileGaraj.Api.Controllers;
 
@@ -31,9 +33,24 @@ public class ReservationsController : FamilyBaseController
     [HttpGet]
     public async Task<IActionResult> GetReservations()
     {
+        // Görüntüleme izinleri: kendi ve başkalarının rezervasyonları ayrı
+        // ayrı kontrol edilir (ExpensesController ile aynı yaklaşım).
+        var canViewOwn = await _familyAuthorizationService
+            .HasPermissionAsync(User, PermissionCodes.ReservationViewOwn);
+
+        var canViewOthers = await _familyAuthorizationService
+            .HasPermissionAsync(User, PermissionCodes.ReservationViewOthers);
+
+        if (!canViewOwn && !canViewOthers)
+            return Forbid();
+
+        var currentMemberId = CurrentMembership.Id;
 
         var reservations = await _context.Reservations
             .Where(x => x.Vehicle.FamilyId == CurrentMembership.FamilyId)
+            .Where(x =>
+                (canViewOwn && x.FamilyMemberId == currentMemberId) ||
+                (canViewOthers && x.FamilyMemberId != currentMemberId))
             .OrderByDescending(x => x.StartDate)
             .Select(x => new ReservationResponse
             {
@@ -105,7 +122,7 @@ public class ReservationsController : FamilyBaseController
         if (request.EndDate <= request.StartDate)
             return BadRequest(new
             {
-                message = "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
+                message = "Bitiş tarihi başlangıç tarihinden Önce Olamaz."
             });
 
         var vehicle = await _context.Vehicles.FirstOrDefaultAsync(x =>
@@ -115,6 +132,15 @@ public class ReservationsController : FamilyBaseController
 
         if (vehicle == null)
             return NotFound(new { message = "Aktif araç bulunamadı." });
+
+        // Çakışma kontrolü ile kayıt arasında aynı araç için başka bir istek
+        // araya girmesin diye araç bazlı kilit alınır. Kilit, transaction
+        // sonlanınca (commit veya rollback) otomatik bırakılır.
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        if (!await TryAcquireVehicleLockAsync(vehicle.Id))
+            return Conflict(new { message = LockBusyMessage });
 
         var hasConflict = await _context.Reservations.AnyAsync(x =>
             x.VehicleId == request.VehicleId &&
@@ -146,6 +172,7 @@ public class ReservationsController : FamilyBaseController
         _context.Reservations.Add(reservation);
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return Ok(new
         {
@@ -210,6 +237,23 @@ public class ReservationsController : FamilyBaseController
                 message = "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
             });
 
+        // Çakışma kontrolü ile kayıt arasında başka bir istek araya girmesin
+        // diye araç bazlı kilit alınır (bkz. CreateReservation).
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        if (!await TryAcquireVehicleLockAsync(reservation.VehicleId))
+            return Conflict(new { message = LockBusyMessage });
+
+        // Kilidi beklerken rezervasyon iptal edilmiş veya tamamlanmış olabilir.
+        await _context.Entry(reservation).ReloadAsync();
+
+        if (reservation.Status != ReservationStatus.Reserved)
+            return BadRequest(new
+            {
+                message = "Yalnızca aktif rezervasyonlar düzenlenebilir."
+            });
+
         // Aynı araç için başka bir rezervasyonla çakışma kontrolü.
         var hasConflict = await _context.Reservations.AnyAsync(x =>
             x.Id != id &&
@@ -230,6 +274,7 @@ public class ReservationsController : FamilyBaseController
         reservation.Description = request.Description?.Trim();
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
         return Ok(new
         {
@@ -299,5 +344,35 @@ public class ReservationsController : FamilyBaseController
         });
     }
 
+    private const string LockBusyMessage =
+        "Bu araç için başka bir rezervasyon işlemi sürüyor. Lütfen tekrar deneyin.";
 
+    // Aynı araç için rezervasyon oluşturma/düzenleme işlemlerini sıraya sokar.
+    // Mutlaka açık bir transaction içinde çağrılmalıdır; kilit transaction
+    // bitince otomatik bırakılır. SQL Server'da zaman aralığı için
+    // "exclusion constraint" olmadığından çakışmayı veritabanı garanti edemez,
+    // bu yüzden uygulama katmanında kilit kullanılır.
+    private async Task<bool> TryAcquireVehicleLockAsync(int vehicleId)
+    {
+        var result = new SqlParameter("@result", SqlDbType.Int)
+        {
+            Direction = ParameterDirection.Output
+        };
+
+        var resource = new SqlParameter(
+            "@resource",
+            $"AileGaraj:reservation:vehicle:{vehicleId}");
+
+        await _context.Database.ExecuteSqlRawAsync(
+            "EXEC @result = sp_getapplock " +
+            "@Resource = @resource, " +
+            "@LockMode = 'Exclusive', " +
+            "@LockOwner = 'Transaction', " +
+            "@LockTimeout = 5000;",
+            result,
+            resource);
+
+        // 0 ve 1: kilit alındı. Negatif değerler: zaman aşımı, deadlock vb.
+        return result.Value is int code && code >= 0;
+    }
 }
