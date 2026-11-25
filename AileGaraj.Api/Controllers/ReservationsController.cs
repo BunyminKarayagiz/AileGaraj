@@ -105,7 +105,7 @@ public class ReservationsController : FamilyBaseController
         if (request.EndDate <= request.StartDate)
             return BadRequest(new
             {
-                message = "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
+                message = "Bitiş tarihi başlangıç tarihinden Önce Olamaz."
             });
 
         var vehicle = await _context.Vehicles.FirstOrDefaultAsync(x =>
