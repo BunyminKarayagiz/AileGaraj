@@ -37,7 +37,9 @@ function Register() {
                 password,
             });
 
-            navigate("/dashboard");
+            navigate("/check-email", {
+                state: { email },
+            });
         } catch (err: unknown) {
             const data = axios.isAxiosError(err)
                 ? err.response?.data as {

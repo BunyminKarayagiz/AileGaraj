@@ -1,4 +1,4 @@
-
+﻿
 using AileGaraj.Api.DTOs.Auth;
 using AileGaraj.Api.Models;
 using AileGaraj.Api.Services;
@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using AileGaraj.Api.Services.Verification.Interfaces;
+using AileGaraj.Api.Services.Verification.Requests;
 
 namespace AileGaraj.Api.Controllers;
 
@@ -16,15 +18,18 @@ public class AuthController : ControllerBase
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly SessionService _sessionService;
+    private readonly IUserVerificationService _verificationService;
 
     public AuthController(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
-        SessionService sessionService)
+        SessionService sessionService,
+        IUserVerificationService verificationService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _sessionService = sessionService;
+        _verificationService = verificationService;
     }
 
     [AllowAnonymous]
@@ -36,7 +41,7 @@ public class AuthController : ControllerBase
         var existingUser = await _userManager.FindByEmailAsync(email);
 
         if (existingUser != null)
-            return BadRequest(new { message = "Bu e-posta adresi zaten kullan�l�yor." });
+            return BadRequest(new { message = "Bu e-posta adresi zaten kullanılıyor." });
 
         var userName = await GenerateUserNameAsync(
             request.FirstName,
@@ -62,12 +67,18 @@ public class AuthController : ControllerBase
                 errors = result.Errors.Select(x => x.Description)
             });
 
-        var response = await _sessionService.CreateSessionAsync(
-            user,
-            Request.Headers.UserAgent.ToString()
+        await _verificationService.SendAsync(
+            new EmailVerificationRequest
+            {
+                UserId = user.Id,
+                Email = user.Email ?? string.Empty
+            }
         );
 
-        return Ok(response);
+        return Ok(new
+        {
+            message = "Hesabınız oluşturuldu. Devam etmek için e-posta adresinizi doğrulayın."
+        });
     }
 
     [AllowAnonymous]
@@ -79,7 +90,7 @@ public class AuthController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
 
         if (user == null || !user.IsActive)
-            return Unauthorized(new { message = "E-posta veya �ifre hatal�." });
+            return Unauthorized(new { message = "E-posta veya şifre hatalı." });
 
         var result = await _signInManager.CheckPasswordSignInAsync(
             user,
@@ -90,11 +101,11 @@ public class AuthController : ControllerBase
         if (result.IsLockedOut)
             return StatusCode(423, new
             {
-                message = "�ok fazla ba�ar�s�z giri� denemesi. 5 dakika sonra tekrar deneyin."
+                message = "Çok fazla başarısız giriş denemesi. 5 dakika sonra tekrar deneyin."
             });
 
         if (!result.Succeeded)
-            return Unauthorized(new { message = "E-posta veya �ifre hatal�." });
+            return Unauthorized(new { message = "E-posta veya şifre hatalı." });
 
         var response = await _sessionService.CreateSessionAsync(
             user,
@@ -115,7 +126,7 @@ public class AuthController : ControllerBase
         if (response == null)
             return Unauthorized(new
             {
-                message = "Oturum ge�ersiz veya s�resi dolmu�."
+                message = "Oturum geçersiz veya süresi dolmuş."
             });
 
         return Ok(response);
@@ -137,7 +148,7 @@ public class AuthController : ControllerBase
 
         await _sessionService.RevokeSessionAsync(sessionId, userId);
 
-        return Ok(new { message = "Oturum ba�ar�yla kapat�ld�." });
+        return Ok(new { message = "Oturum başarıyla kapatıldı." });
     }
 
     private async Task<string> GenerateUserNameAsync(
@@ -148,12 +159,12 @@ public class AuthController : ControllerBase
             .ToLowerInvariant();
 
         userName = userName
-            .Replace("�", "i")
-            .Replace("�", "g")
-            .Replace("�", "u")
-            .Replace("�", "s")
-            .Replace("�", "o")
-            .Replace("�", "c");
+            .Replace("ı", "i")
+            .Replace("ğ", "g")
+            .Replace("ü", "u")
+            .Replace("ş", "s")
+            .Replace("ö", "o")
+            .Replace("ç", "c");
 
         var baseUserName = userName;
         var counter = 1;
@@ -165,5 +176,76 @@ public class AuthController : ControllerBase
         }
 
         return userName;
+    }
+
+    [HttpPost("verify-email")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyEmail(
+    [FromBody] VerifyEmailRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.UserId) ||
+            string.IsNullOrWhiteSpace(request.Token))
+        {
+            return BadRequest(new
+            {
+                message = "Doğrulama bilgileri eksik."
+            });
+        }
+
+        var result = await _verificationService.VerifyAsync(
+            new EmailVerificationRequest
+            {
+                UserId = request.UserId
+            },
+            request.Token
+        );
+
+        if (!result)
+        {
+            return BadRequest(new
+            {
+                message = "Doğrulama bağlantısı geçersiz veya süresi dolmuş."
+            });
+        }
+
+        return Ok(new
+        {
+            message = "E-posta adresiniz başarıyla doğrulandı."
+        });
+    }
+
+    [HttpPost("resend-verification")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResendVerification(
+    [FromBody] ResendVerificationRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest(new
+            {
+                message = "E-posta adresi gereklidir."
+            });
+        }
+
+        var normalizedEmail = request.Email.Trim();
+
+        var user = await _userManager.FindByEmailAsync(normalizedEmail);
+
+        // Hesap varlığını dışarıya belli etmiyoruz.
+        if (user is not null && !user.EmailConfirmed && user.IsActive)
+        {
+            await _verificationService.SendAsync(
+                new EmailVerificationRequest
+                {
+                    UserId = user.Id,
+                    Email = user.Email ?? string.Empty
+                }
+            );
+        }
+
+        return Ok(new
+        {
+            message = "Eğer bu adres doğrulanmamış bir hesaba aitse doğrulama e-postası gönderildi."
+        });
     }
 }

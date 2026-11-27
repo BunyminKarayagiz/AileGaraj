@@ -1,4 +1,4 @@
-
+﻿
 namespace AileGaraj.Api.Models;
 
 public class Vehicle
@@ -20,6 +20,10 @@ public class Vehicle
     public string FuelType { get; set; } = string.Empty;
 
     public string? Description { get; set; }
+
+    public string? ImageUrl { get; set; }
+
+    public string? ImagePublicId { get; set; }
 
     public bool IsActive { get; set; } = true;
 

@@ -7,20 +7,13 @@ import type { AuthResponse } from "../types/auth";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-const defaultHeaders = {
-    "Content-Type": "application/json",
-};
 
 const api = axios.create({
     baseURL: API_URL,
-    headers: defaultHeaders,
 });
 
-// Refresh isteği kendi interceptor'ından geçmemeli; aksi halde refresh
-// başarısız olduğunda sonsuz döngü oluşabilir.
 const refreshClient = axios.create({
     baseURL: API_URL,
-    headers: defaultHeaders,
 });
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
@@ -81,6 +74,10 @@ api.interceptors.request.use((config) => {
 
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (config.data instanceof FormData) {
+        config.headers.delete("Content-Type");
     }
 
     return config;

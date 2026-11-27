@@ -1,4 +1,4 @@
-
+﻿
 namespace AileGaraj.Api.Models;
 
 public class UserNotificationPreference

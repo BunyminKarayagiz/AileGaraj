@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using AileGaraj.Api.DTOs.Auth;
@@ -84,7 +84,8 @@ public class JwtTokenService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 Email = user.Email ?? "",
-                PhoneNumber = user.PhoneNumber ?? ""
+                PhoneNumber = user.PhoneNumber ?? "",
+                Roles = roles.ToList()
             }
         };
     }

@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-    ArrowLeft,
     ChevronLeft,
     ChevronRight,
     CalendarDays,
@@ -19,6 +18,13 @@ import {
     Pencil,
     Trash2,
     Save,
+    CheckCircle2,
+    Ban,
+    ArrowUpRight,
+    MapPin,
+    UserRound,
+    CalendarClock,
+    FileText,
 } from "lucide-react";
 import axios from "axios";
 
@@ -560,120 +566,145 @@ export default function Reservations() {
         );
     }
 
+
     return (
-        <div className="min-h-screen bg-[#f8f7fa]">
-            <header className="bg-white border-b border-gray-200">
-                <div className="max-w-[1600px] mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="min-h-full bg-[#f7f5fa]">
+            <main className="mx-auto max-w-[1700px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+
+                {/* Page heading */}
+                <div className="mb-8 flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
                     <div>
-                        <h1 className="text-2xl font-bold text-[#240046]">
-                            AileGaraj
+                        <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-[#974CE0]">
+                            <span className="h-2 w-2 rounded-full bg-[#E1FF00]" />
+                            AİLE GARAJI
+                            <ArrowUpRight size={15} />
+                            REZERVASYON MERKEZİ
+                        </div>
+
+                        <h1 className="text-3xl font-bold tracking-tight text-[#240046] sm:text-4xl">
+                            Araç Rezervasyonları
                         </h1>
-                        <p className="text-sm text-gray-500">
-                            Rezervasyon yönetimi
+
+                        <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500 sm:text-base">
+                            Aile araçlarının kullanım planını takip et, rezervasyonlarını
+                            kolayca yönet ve takvimdeki uygun zamanları görüntüle.
                         </p>
                     </div>
 
-                    <button
-                        onClick={() => navigate("/dashboard")}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                    >
-                        <ArrowLeft size={18} />
-                        Dashboard
-                    </button>
-                </div>
-            </header>
+                    <div className="flex flex-wrap gap-3">
+                        <button
+                            onClick={() => navigate("/vehicles")}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-[#974CE0]/40 hover:bg-purple-50"
+                        >
+                            <Car size={18} />
+                            Araçlarım
+                        </button>
 
-            <main className="max-w-[1600px] mx-auto px-6 py-8">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-7">
-                    <div>
-                        <h2 className="text-2xl font-bold text-[#240046]">
-                            Araç Doluluk Takvimi
-                        </h2>
-                        <p className="text-gray-500 mt-1">
-                            Aile araçlarının rezervasyon durumlarını zaman çizelgesinde görüntüle.
-                        </p>
-                    </div>
-                    <button
-                        onClick={openCreateModal}
-                        disabled={vehicles.length === 0}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition disabled:opacity-50"
-                    >
-                        <Plus size={18} />
-                        Yeni Rezervasyon
-                    </button>
-                    <button
-                        onClick={() => navigate("/dashboard")}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
-                    >
-                        <Car size={18} />
-                        Araçları Görüntüle
-                    </button>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                        <p className="text-sm text-gray-500">
-                            Aktif rezervasyon
-                        </p>
-                        <p className="text-3xl font-bold text-[#5A189A] mt-2">
-                            {activeCount}
-                        </p>
-                    </div>
-
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                        <p className="text-sm text-gray-500">
-                            Tamamlanan
-                        </p>
-                        <p className="text-3xl font-bold text-emerald-600 mt-2">
-                            {completedCount}
-                        </p>
-                    </div>
-
-                    <div className="bg-white rounded-xl border border-gray-200 p-5">
-                        <p className="text-sm text-gray-500">
-                            İptal edilen
-                        </p>
-                        <p className="text-3xl font-bold text-red-500 mt-2">
-                            {cancelledCount}
-                        </p>
+                        <button
+                            onClick={openCreateModal}
+                            disabled={vehicles.length === 0}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5A189A] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/15 transition hover:-translate-y-0.5 hover:bg-[#240046] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <Plus size={19} />
+                            Yeni Rezervasyon
+                        </button>
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm">
-                    <div className="p-5 border-b border-gray-200">
-                        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                {/* Statistics */}
+                <div className="mb-7 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="group rounded-2xl border border-purple-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Aktif rezervasyon
+                                </p>
+                                <p className="mt-3 text-3xl font-bold text-[#5A189A]">
+                                    {activeCount}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Devam eden ve planlanan
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-purple-50 p-3 text-[#5A189A] transition group-hover:bg-[#5A189A] group-hover:text-white">
+                                <CalendarDays size={22} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="group rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    Tamamlanan
+                                </p>
+                                <p className="mt-3 text-3xl font-bold text-emerald-600">
+                                    {completedCount}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    Başarıyla tamamlanan kullanımlar
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-emerald-50 p-3 text-emerald-600 transition group-hover:bg-emerald-600 group-hover:text-white">
+                                <CheckCircle2 size={22} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="group rounded-2xl border border-red-100 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
+                        <div className="flex items-start justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">
+                                    İptal edilen
+                                </p>
+                                <p className="mt-3 text-3xl font-bold text-red-500">
+                                    {cancelledCount}
+                                </p>
+                                <p className="mt-1 text-xs text-gray-400">
+                                    İptal edilmiş rezervasyonlar
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-red-50 p-3 text-red-500 transition group-hover:bg-red-500 group-hover:text-white">
+                                <Ban size={22} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Calendar */}
+                <section className="overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm">
+                    {/* Calendar header */}
+                    <div className="border-b border-gray-100 p-5 sm:p-6">
+                        <div className="flex flex-col justify-between gap-5 xl:flex-row xl:items-center">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                                    <ChartGantt
-                                        className="text-[#5A189A]"
-                                        size={22}
-                                    />
+                                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#5A189A]/10 text-[#5A189A]">
+                                    <ChartGantt size={23} />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-[#240046]">
-                                        Doluluk çizelgesi
-                                    </h3>
-                                    <p className="text-xs text-gray-500">
-                                        {vehicles.length} aktif araç
+                                    <h2 className="font-bold text-[#240046]">
+                                        Araç doluluk takvimi
+                                    </h2>
+                                    <p className="mt-1 text-xs text-gray-400">
+                                        {vehicles.length} araç · Zaman çizelgesi
                                     </p>
                                 </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
-                                <div className="flex bg-gray-100 rounded-lg p-1">
+                                <div className="flex rounded-xl bg-gray-100 p-1">
                                     {(
                                         [
-                                            ["day", "Günlük"],
-                                            ["week", "Haftalık"],
-                                            ["month", "Aylık"],
+                                            ["day", "Gün"],
+                                            ["week", "Hafta"],
+                                            ["month", "Ay"],
                                         ] as const
                                     ).map(([value, label]) => (
                                         <button
                                             key={value}
                                             onClick={() => setView(value)}
-                                            className={`px-3 py-2 rounded-md text-sm font-medium transition ${view === value
+                                            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${view === value
                                                     ? "bg-white text-[#5A189A] shadow-sm"
-                                                    : "text-gray-500 hover:text-[#5A189A]"
+                                                    : "text-gray-500 hover:text-[#240046]"
                                                 }`}
                                         >
                                             {label}
@@ -683,37 +714,35 @@ export default function Reservations() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5">
-                            <div className="flex items-center gap-3">
+                        {/* Date navigation and filters */}
+                        <div className="mt-6 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                            <div className="flex flex-wrap items-center gap-2">
                                 <button
                                     onClick={() => navigateDate(-1)}
-                                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                                    className="rounded-xl border border-gray-200 p-2.5 text-gray-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-[#5A189A]"
+                                    aria-label="Önceki dönem"
                                 >
                                     <ChevronLeft size={19} />
                                 </button>
 
-                                <div className="flex items-center gap-2 min-w-[180px]">
-                                    <CalendarDays
-                                        size={18}
-                                        className="text-[#5A189A]"
-                                    />
-                                    <span className="font-semibold text-[#240046] capitalize">
+                                <div className="flex min-w-[190px] items-center gap-2 px-2">
+                                    <CalendarDays size={18} className="shrink-0 text-[#974CE0]" />
+                                    <span className="font-semibold capitalize text-[#240046]">
                                         {rangeTitle()}
                                     </span>
                                 </div>
 
                                 <button
                                     onClick={() => navigateDate(1)}
-                                    className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50"
+                                    className="rounded-xl border border-gray-200 p-2.5 text-gray-600 transition hover:border-purple-200 hover:bg-purple-50 hover:text-[#5A189A]"
+                                    aria-label="Sonraki dönem"
                                 >
                                     <ChevronRight size={19} />
                                 </button>
 
                                 <button
-                                    onClick={() =>
-                                        setSelectedDate(startOfDay(new Date()))
-                                    }
-                                    className="px-3 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+                                    onClick={() => setSelectedDate(startOfDay(new Date()))}
+                                    className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-2.5 text-sm font-semibold text-[#5A189A] transition hover:bg-purple-100"
                                 >
                                     Bugün
                                 </button>
@@ -722,81 +751,87 @@ export default function Reservations() {
                             <select
                                 value={statusFilter}
                                 onChange={(e) =>
-                                    setStatusFilter(
-                                        e.target.value as StatusFilter
-                                    )
+                                    setStatusFilter(e.target.value as StatusFilter)
                                 }
-                                className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-[#974CE0]"
+                                className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 outline-none transition focus:border-[#974CE0] focus:ring-4 focus:ring-purple-100 lg:w-auto"
                             >
                                 <option value="all">Tüm rezervasyonlar</option>
-                                <option value="active">Aktif</option>
-                                <option value="completed">Tamamlanan</option>
-                                <option value="cancelled">İptal edilen</option>
+                                <option value="active">Aktif rezervasyonlar</option>
+                                <option value="completed">Tamamlananlar</option>
+                                <option value="cancelled">İptal edilenler</option>
                             </select>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-4 mt-5 text-xs text-gray-500">
-                            <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded bg-[#5A189A]" />
+                        {/* Legend */}
+                        <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-gray-100 pt-4">
+                            <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                Durumlar
+                            </span>
+                            <span className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                <span className="h-2.5 w-2.5 rounded-full bg-[#5A189A]" />
                                 Aktif
                             </span>
-                            <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded bg-emerald-600" />
+                            <span className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                                 Tamamlandı
                             </span>
-                            <span className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded bg-red-500" />
+                            <span className="flex items-center gap-2 text-xs font-medium text-gray-600">
+                                <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
                                 İptal edildi
                             </span>
                         </div>
                     </div>
 
+                    {/* Timeline */}
                     {vehicles.length === 0 ? (
-                        <div className="p-12 text-center">
-                            <Car
-                                size={40}
-                                className="mx-auto text-gray-300 mb-4"
-                            />
+                        <div className="px-6 py-20 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-50 text-[#974CE0]">
+                                <Car size={30} />
+                            </div>
                             <h3 className="font-bold text-[#240046]">
-                                Henüz aktif araç yok
+                                Henüz araç eklenmemiş
                             </h3>
-                            <p className="text-sm text-gray-500 mt-2">
-                                Doluluk çizelgesini görmek için önce araç eklemelisin.
+                            <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500">
+                                Rezervasyon oluşturabilmek ve doluluk takvimini
+                                kullanabilmek için önce aile garajına araç eklemelisin.
                             </p>
+                            <button
+                                onClick={() => navigate("/vehicles")}
+                                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#5A189A] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#240046]"
+                            >
+                                <Plus size={17} />
+                                Araç Ekle
+                            </button>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <div
                                 className="min-w-full"
-                                style={{
-                                    minWidth: `${220 + timelineWidth}px`,
-                                }}
+                                style={{ minWidth: `${240 + timelineWidth}px` }}
                             >
-                                <div className="flex border-b border-gray-200 bg-gray-50">
-                                    <div className="w-[220px] shrink-0 px-5 py-4 text-xs font-bold text-gray-500 uppercase">
-                                        Araç
+                                {/* Timeline labels */}
+                                <div className="flex border-b border-gray-100 bg-gray-50/80">
+                                    <div className="sticky left-0 z-20 flex w-[240px] shrink-0 items-center border-r border-gray-100 bg-gray-50/95 px-5 py-4 text-xs font-bold uppercase tracking-wider text-gray-400">
+                                        Araçlar
                                     </div>
 
                                     <div
-                                        className="relative h-14 border-l border-gray-200"
+                                        className="relative h-14"
                                         style={{ width: timelineWidth }}
                                     >
-                                        {getTimelineLabels().map(
-                                            (item, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="absolute top-0 bottom-0 flex items-center pl-2 border-l border-gray-200 text-xs font-medium text-gray-500"
-                                                    style={{
-                                                        left: `${item.left}%`,
-                                                    }}
-                                                >
-                                                    {item.label}
-                                                </div>
-                                            )
-                                        )}
+                                        {getTimelineLabels().map((item, index) => (
+                                            <div
+                                                key={index}
+                                                className="absolute inset-y-0 flex items-center border-l border-gray-200 pl-2 text-xs font-semibold text-gray-500"
+                                                style={{ left: `${item.left}%` }}
+                                            >
+                                                {item.label}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
+                                {/* Vehicle rows */}
                                 {vehicles.map((vehicle) => {
                                     const vehicleReservations =
                                         getReservationsForVehicle(vehicle.id);
@@ -804,68 +839,77 @@ export default function Reservations() {
                                     return (
                                         <div
                                             key={vehicle.id}
-                                            className="flex border-b border-gray-100 hover:bg-gray-50/50"
+                                            className="group flex border-b border-gray-100 transition last:border-b-0 hover:bg-purple-50/20"
                                         >
-                                            <div className="w-[220px] shrink-0 px-5 py-4 flex flex-col justify-center">
-                                                <div className="flex items-center gap-2">
-                                                    <Car
-                                                        size={17}
-                                                        className="text-[#5A189A] shrink-0"
-                                                    />
-                                                    <span className="font-semibold text-sm text-[#240046]">
-                                                        {vehicle.brand}{" "}
-                                                        {vehicle.model}
-                                                    </span>
+                                            <div className="sticky left-0 z-10 flex w-[240px] shrink-0 flex-col justify-center border-r border-gray-100 bg-white px-5 py-4 transition group-hover:bg-[#fcfaff]">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#5A189A]">
+                                                        <Car size={19} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-bold text-[#240046]">
+                                                            {vehicle.brand} {vehicle.model}
+                                                        </p>
+                                                        <p className="mt-1 text-xs font-medium tracking-wide text-gray-400">
+                                                            {vehicle.plateNumber}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <span className="text-xs text-gray-500 ml-6 mt-1">
-                                                    {vehicle.plateNumber}
-                                                </span>
+                                                <div className="mt-3 flex items-center gap-1.5 text-[11px] text-gray-400">
+                                                    <CalendarDays size={12} />
+                                                    {vehicleReservations.length} rezervasyon
+                                                </div>
                                             </div>
 
                                             <div
-                                                className="relative border-l border-gray-100 h-[76px]"
+                                                className="relative h-[88px] shrink-0"
                                                 style={{
                                                     width: timelineWidth,
                                                     backgroundImage:
                                                         view === "day"
-                                                            ? "repeating-linear-gradient(to right, transparent 0, transparent 29px, #e5e7eb 29px, #e5e7eb 30px)"
+                                                            ? "repeating-linear-gradient(to right, transparent 0, transparent 29px, #f0edf4 29px, #f0edf4 30px)"
                                                             : view === "week"
-                                                                ? "repeating-linear-gradient(to right, transparent 0, transparent 23px, #e5e7eb 23px, #e5e7eb 24px)"
-                                                                : "repeating-linear-gradient(to right, transparent 0, transparent 43px, #e5e7eb 43px, #e5e7eb 44px)",
+                                                                ? "repeating-linear-gradient(to right, transparent 0, transparent 23px, #f0edf4 23px, #f0edf4 24px)"
+                                                                : "repeating-linear-gradient(to right, transparent 0, transparent 43px, #f0edf4 43px, #f0edf4 44px)",
                                                 }}
                                             >
-                                                {vehicleReservations.map(
-                                                    (reservation) => {
-                                                        const position =
-                                                            getReservationPosition(
-                                                                reservation
-                                                            );
+                                                {vehicleReservations.map((reservation) => {
+                                                    const position =
+                                                        getReservationPosition(reservation);
 
-                                                        return (
-                                                            <button
-                                                                key={reservation.id}
-                                                                onClick={() =>
-                                                                    setSelectedReservation(
-                                                                        reservation
-                                                                    )
-                                                                }
-                                                                title={`${reservation.memberName} - ${reservation.destination}`}
-                                                                className={`absolute top-3 h-12 rounded-lg px-2 text-white text-xs font-medium overflow-hidden whitespace-nowrap text-left shadow-sm hover:brightness-110 transition ${statusColors[reservation.status]}`}
-                                                                style={{
-                                                                    left: `${position.left}%`,
-                                                                    width: `${position.width}%`,
-                                                                    minWidth: "4px",
-                                                                }}
-                                                            >
-                                                                {position.width > 5 && (
-                                                                    <span>
+                                                    return (
+                                                        <button
+                                                            key={reservation.id}
+                                                            onClick={() =>
+                                                                setSelectedReservation(reservation)
+                                                            }
+                                                            title={`${reservation.memberName} · ${reservation.destination}`}
+                                                            className={`absolute top-4 flex h-[56px] min-w-1 flex-col justify-center overflow-hidden rounded-xl border border-white/20 px-3 text-left text-white shadow-sm transition hover:z-10 hover:brightness-110 hover:shadow-md ${reservation.status === 1
+                                                                    ? "bg-gradient-to-r from-[#5A189A] to-[#974CE0]"
+                                                                    : reservation.status === 2
+                                                                        ? "bg-gradient-to-r from-emerald-600 to-emerald-500"
+                                                                        : "bg-gradient-to-r from-red-500 to-rose-400"
+                                                                }`}
+                                                            style={{
+                                                                left: `${position.left}%`,
+                                                                width: `${position.width}%`,
+                                                            }}
+                                                        >
+                                                            {position.width > 5 && (
+                                                                <>
+                                                                    <span className="truncate text-xs font-bold">
                                                                         {reservation.memberName}
                                                                     </span>
-                                                                )}
-                                                            </button>
-                                                        );
-                                                    }
-                                                )}
+                                                                    {position.width > 10 && (
+                                                                        <span className="mt-0.5 truncate text-[10px] text-white/80">
+                                                                            {reservation.destination}
+                                                                        </span>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     );
@@ -874,156 +918,256 @@ export default function Reservations() {
                         </div>
                     )}
 
-                    <div className="px-5 py-4 border-t border-gray-100 text-xs text-gray-500 flex items-center gap-2">
-                        <Clock size={14} />
-                        {view === "day"
-                            ? "Günlük görünüm: 30 dakikalık zaman aralıkları"
-                            : view === "week"
-                                ? "Haftalık görünüm: 1 saatlik zaman aralıkları"
-                                : "Aylık görünüm: Günlük doluluk"}
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-5 py-4">
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <Clock size={14} className="text-[#974CE0]" />
+                            {view === "day"
+                                ? "Günlük görünüm · 30 dakikalık aralıklar"
+                                : view === "week"
+                                    ? "Haftalık görünüm · 1 saatlik aralıklar"
+                                    : "Aylık görünüm · Günlük doluluk"}
+                        </div>
+                        <p className="text-xs text-gray-400">
+                            Detayları görüntülemek için bir rezervasyona tıkla.
+                        </p>
                     </div>
-                </div>
+                </section>
             </main>
-            {showFormModal && (
-                <div className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-                        <div className="flex items-center justify-between p-6 border-b">
-                            <div>
-                                <h3 className="text-xl font-bold text-[#240046]">
-                                    {formMode === "create"
-                                        ? "Yeni Rezervasyon"
-                                        : "Rezervasyonu Düzenle"}
-                                </h3>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    Rezervasyon bilgilerini doldur.
-                                </p>
-                            </div>
 
-                            <button
-                                type="button"
-                                onClick={() => setShowFormModal(false)}
-                                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-                            >
-                                <X size={22} />
-                            </button>
+
+            {showFormModal && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-[#160b20]/60 p-3 backdrop-blur-sm sm:p-6"
+                    onMouseDown={(e) => {
+                        if (e.target === e.currentTarget && !isSaving) {
+                            setShowFormModal(false);
+                        }
+                    }}
+                >
+                    <div className="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/50 bg-white shadow-2xl shadow-purple-950/20">
+                        {/* Header */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-[#240046] via-[#5A189A] to-[#974CE0] px-6 py-7 text-white sm:px-8">
+                            <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+                            <div className="absolute -bottom-20 right-28 h-40 w-40 rounded-full bg-[#E1FF00]/10 blur-2xl" />
+
+                            <div className="relative flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-purple-100">
+                                        <CalendarDays size={14} />
+                                        REZERVASYON YÖNETİMİ
+                                    </div>
+
+                                    <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">
+                                        {formMode === "create"
+                                            ? "Yeni Rezervasyon"
+                                            : "Rezervasyonu Düzenle"}
+                                    </h3>
+
+                                    <p className="mt-2 max-w-md text-sm leading-6 text-purple-100/80">
+                                        {formMode === "create"
+                                            ? "Aracını seç, kullanım zamanını belirle ve planını oluştur."
+                                            : "Rezervasyon bilgilerini güncelleyebilirsin."}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => !isSaving && setShowFormModal(false)}
+                                    disabled={isSaving}
+                                    className="rounded-xl border border-white/20 bg-white/10 p-2.5 text-white transition hover:bg-white/20 disabled:opacity-50"
+                                    aria-label="Pencereyi kapat"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleReservationSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Araç
-                                </label>
+                        <form onSubmit={handleReservationSubmit}>
+                            <div className="max-h-[65vh] space-y-6 overflow-y-auto p-6 sm:p-8">
+                                {/* Vehicle */}
+                                <div>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-[#5A189A]">
+                                            <Car size={17} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#240046]">
+                                                Araç bilgileri
+                                            </h4>
+                                            <p className="text-xs text-gray-400">
+                                                Kullanmak istediğin aracı seç.
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                <select
-                                    required
-                                    value={formData.vehicleId}
-                                    disabled={formMode === "edit"}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            vehicleId: Number(e.target.value),
-                                        })
-                                    }
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#974CE0] disabled:bg-gray-100"
-                                >
-                                    <option value={0} disabled>
-                                        Araç seçin
-                                    </option>
-
-                                    {vehicles.map((vehicle) => (
-                                        <option key={vehicle.id} value={vehicle.id}>
-                                            {vehicle.brand} {vehicle.model} - {vehicle.plateNumber}
+                                    <select
+                                        required
+                                        value={formData.vehicleId}
+                                        disabled={formMode === "edit"}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                vehicleId: Number(e.target.value),
+                                            })
+                                        }
+                                        className="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3.5 text-sm font-medium text-gray-700 outline-none transition focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                    >
+                                        <option value={0} disabled>
+                                            Araç seçin
                                         </option>
-                                    ))}
-                                </select>
-                            </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Başlangıç tarihi ve saati
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    required
-                                    value={formData.startDate}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            startDate: e.target.value,
-                                        })
-                                    }
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#974CE0]"
-                                />
-                            </div>
+                                        {vehicles.map((vehicle) => (
+                                            <option key={vehicle.id} value={vehicle.id}>
+                                                {vehicle.brand} {vehicle.model} — {vehicle.plateNumber}
+                                            </option>
+                                        ))}
+                                    </select>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Bitiş tarihi ve saati
-                                </label>
-                                <input
-                                    type="datetime-local"
-                                    required
-                                    value={formData.endDate}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            endDate: e.target.value,
-                                        })
-                                    }
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#974CE0]"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Gidilecek yer
-                                </label>
-                                <input
-                                    type="text"
-                                    required
-                                    maxLength={200}
-                                    value={formData.destination}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            destination: e.target.value,
-                                        })
-                                    }
-                                    placeholder="Örn. İstanbul, Ankara..."
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#974CE0]"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Açıklama
-                                </label>
-                                <textarea
-                                    rows={3}
-                                    maxLength={500}
-                                    value={formData.description}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            description: e.target.value,
-                                        })
-                                    }
-                                    placeholder="İsteğe bağlı açıklama..."
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#974CE0] resize-none"
-                                />
-                            </div>
-
-                            {formError && (
-                                <div className="p-3 rounded-lg bg-red-50 text-red-600 text-sm">
-                                    {formError}
+                                    {formMode === "edit" && (
+                                        <p className="mt-2 text-xs text-gray-400">
+                                            Düzenleme sırasında araç değiştirilemez.
+                                        </p>
+                                    )}
                                 </div>
-                            )}
 
-                            <div className="flex gap-3 pt-2">
+                                {/* Date and time */}
+                                <div>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-[#5A189A]">
+                                            <CalendarClock size={17} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#240046]">
+                                                Kullanım zamanı
+                                            </h4>
+                                            <p className="text-xs text-gray-400">
+                                                Başlangıç ve bitiş tarihlerini belirle.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <label className="mb-2 block text-xs font-semibold text-gray-600">
+                                                Başlangıç tarihi
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                required
+                                                value={formData.startDate}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        startDate: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full min-w-0 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <label className="mb-2 block text-xs font-semibold text-gray-600">
+                                                Bitiş tarihi
+                                            </label>
+                                            <input
+                                                type="datetime-local"
+                                                required
+                                                min={formData.startDate || undefined}
+                                                value={formData.endDate}
+                                                onChange={(e) =>
+                                                    setFormData({
+                                                        ...formData,
+                                                        endDate: e.target.value,
+                                                    })
+                                                }
+                                                className="w-full min-w-0 rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-3 text-sm text-gray-700 outline-none transition focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Destination */}
+                                <div>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-[#5A189A]">
+                                            <MapPin size={17} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#240046]">
+                                                Varış noktası
+                                            </h4>
+                                            <p className="text-xs text-gray-400">
+                                                Yolculuğun nereye olacak?
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={200}
+                                        value={formData.destination}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                destination: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Örn. İstanbul, Ankara, İzmir..."
+                                        className="w-full rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                                    />
+                                </div>
+
+                                {/* Description */}
+                                <div>
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-50 text-[#5A189A]">
+                                            <FileText size={17} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-[#240046]">
+                                                Açıklama
+                                            </h4>
+                                            <p className="text-xs text-gray-400">
+                                                Rezervasyonuna isteğe bağlı not ekle.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <textarea
+                                        rows={3}
+                                        maxLength={500}
+                                        value={formData.description}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                description: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Yolculuk hakkında eklemek istediğin bir not var mı?"
+                                        className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50/70 px-4 py-3.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                                    />
+
+                                    <p className="mt-1.5 text-right text-xs text-gray-400">
+                                        {formData.description.length}/500
+                                    </p>
+                                </div>
+
+                                {formError && (
+                                    <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm text-red-600">
+                                        <Ban size={18} className="mt-0.5 shrink-0" />
+                                        <p>{formError}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="flex flex-col-reverse gap-3 border-t border-gray-100 bg-gray-50/70 px-6 py-5 sm:flex-row sm:justify-end sm:px-8">
                                 <button
                                     type="button"
                                     onClick={() => setShowFormModal(false)}
-                                    className="flex-1 px-4 py-3 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50"
+                                    disabled={isSaving}
+                                    className="rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-100 disabled:opacity-50"
                                 >
                                     Vazgeç
                                 </button>
@@ -1031,7 +1175,7 @@ export default function Reservations() {
                                 <button
                                     type="submit"
                                     disabled={isSaving}
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] disabled:opacity-50"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#5A189A] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/15 transition hover:-translate-y-0.5 hover:bg-[#240046] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {isSaving ? (
                                         <Loader2 size={18} className="animate-spin" />
@@ -1039,7 +1183,9 @@ export default function Reservations() {
                                         <Save size={18} />
                                     )}
 
-                                    {formMode === "create" ? "Rezervasyon Oluştur" : "Değişiklikleri Kaydet"}
+                                    {formMode === "create"
+                                        ? "Rezervasyon Oluştur"
+                                        : "Değişiklikleri Kaydet"}
                                 </button>
                             </div>
                         </form>
@@ -1047,191 +1193,239 @@ export default function Reservations() {
                 </div>
             )}
 
+
+
             {selectedReservation && (
                 <div
-                    className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#160b20]/60 p-3 backdrop-blur-sm sm:p-6"
                     onMouseDown={(e) => {
                         if (e.target === e.currentTarget) {
                             setSelectedReservation(null);
                         }
                     }}
                 >
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                            <div>
-                                <h3 className="text-xl font-bold text-[#240046]">
-                                    Rezervasyon Detayı
-                                </h3>
-                                <p className="text-sm text-gray-500 mt-1">
-                                    #{selectedReservation.id}
-                                </p>
-                            </div>
+                    <div className="my-auto w-full max-w-xl overflow-hidden rounded-3xl border border-white/50 bg-white shadow-2xl shadow-purple-950/20">
+                        {/* Header */}
+                        <div className="relative overflow-hidden bg-gradient-to-br from-[#240046] via-[#5A189A] to-[#974CE0] px-6 py-7 text-white sm:px-8">
+                            <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
 
-                            <button
-                                onClick={() =>
-                                    setSelectedReservation(null)
-                                }
-                                className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-                            >
-                                <X size={22} />
-                            </button>
+                            <div className="relative flex items-start justify-between gap-4">
+                                <div>
+                                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-purple-100">
+                                        <CalendarDays size={14} />
+                                        REZERVASYON DETAYI
+                                    </div>
+
+                                    <h3 className="text-2xl font-bold tracking-tight">
+                                        Rezervasyon #{selectedReservation.id}
+                                    </h3>
+
+                                    <p className="mt-2 text-sm text-purple-100/80">
+                                        Araç kullanım planının tüm detayları
+                                    </p>
+                                </div>
+
+                                <button
+                                    onClick={() => setSelectedReservation(null)}
+                                    className="rounded-xl border border-white/20 bg-white/10 p-2.5 text-white transition hover:bg-white/20"
+                                    aria-label="Pencereyi kapat"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
                         </div>
 
-                        <div className="p-6 space-y-4">
-                            <div>
-                                <p className="text-xs text-gray-500">
-                                    Araç
-                                </p>
-                                <p className="font-semibold text-[#240046]">
-                                    {selectedReservation.vehicleBrand}{" "}
-                                    {selectedReservation.vehicleModel}
-                                </p>
-                                <p className="text-sm text-gray-500">
-                                    {selectedReservation.plateNumber}
-                                </p>
-                            </div>
-
-                            <div>
-                                <p className="text-xs text-gray-500">
-                                    Rezervasyon sahibi
-                                </p>
-                                <p className="font-medium text-gray-800">
-                                    {selectedReservation.memberName}
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs text-gray-500">
-                                        Başlangıç
-                                    </p>
-                                    <p className="font-medium text-sm">
-                                        {formatDate(
-                                            new Date(
-                                                selectedReservation.startDate
-                                            )
-                                        )}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        {formatTime(
-                                            new Date(
-                                                selectedReservation.startDate
-                                            )
-                                        )}
-                                    </p>
+                        <div className="max-h-[65vh] space-y-5 overflow-y-auto p-6 sm:p-8">
+                            {/* Vehicle card */}
+                            <div className="flex items-center gap-4 rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50 to-white p-4">
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#5A189A] text-white shadow-lg shadow-purple-900/15">
+                                    <Car size={27} />
                                 </div>
 
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        Rezervasyon yapılan araç
+                                    </p>
+                                    <h4 className="mt-1 truncate text-lg font-bold text-[#240046]">
+                                        {selectedReservation.vehicleBrand}{" "}
+                                        {selectedReservation.vehicleModel}
+                                    </h4>
+                                    <span className="mt-1 inline-flex rounded-md border border-purple-100 bg-white px-2 py-1 text-xs font-bold tracking-wider text-[#5A189A]">
+                                        {selectedReservation.plateNumber}
+                                    </span>
+                                </div>
+
+                                <span
+                                    className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold text-white ${statusColors[selectedReservation.status] ?? "bg-gray-500"}`}
+                                >
+                                    {statusLabels[selectedReservation.status] ?? "Bilinmiyor"}
+                                </span>
+                            </div>
+
+                            {/* Reservation owner */}
+                            <div className="flex items-center gap-3 rounded-xl border border-gray-100 p-4">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#5A189A]">
+                                    <UserRound size={19} />
+                                </div>
                                 <div>
-                                    <p className="text-xs text-gray-500">
-                                        Bitiş
+                                    <p className="text-xs font-medium text-gray-400">
+                                        Rezervasyon sahibi
                                     </p>
-                                    <p className="font-medium text-sm">
-                                        {formatDate(
-                                            new Date(
-                                                selectedReservation.endDate
-                                            )
-                                        )}
-                                    </p>
-                                    <p className="text-sm text-gray-500">
-                                        {formatTime(
-                                            new Date(
-                                                selectedReservation.endDate
-                                            )
-                                        )}
+                                    <p className="mt-1 text-sm font-bold text-[#240046]">
+                                        {selectedReservation.memberName}
                                     </p>
                                 </div>
                             </div>
 
+                            {/* Date timeline */}
                             <div>
-                                <p className="text-xs text-gray-500">
-                                    Varış noktası
-                                </p>
-                                <p className="font-medium text-gray-800">
-                                    {selectedReservation.destination}
-                                </p>
+                                <div className="mb-3 flex items-center gap-2">
+                                    <CalendarClock size={17} className="text-[#974CE0]" />
+                                    <h4 className="text-sm font-bold text-[#240046]">
+                                        Kullanım zamanı
+                                    </h4>
+                                </div>
+
+                                <div className="relative grid grid-cols-2 gap-3">
+                                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                            <span className="text-xs font-bold text-emerald-700">
+                                                BAŞLANGIÇ
+                                            </span>
+                                        </div>
+
+                                        <p className="text-sm font-bold text-[#240046]">
+                                            {formatDate(
+                                                new Date(selectedReservation.startDate)
+                                            )}
+                                        </p>
+                                        <p className="mt-1 text-xl font-bold tabular-nums text-emerald-700">
+                                            {formatTime(
+                                                new Date(selectedReservation.startDate)
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-2xl border border-red-100 bg-red-50/60 p-4">
+                                        <div className="mb-3 flex items-center gap-2">
+                                            <span className="h-2 w-2 rounded-full bg-red-500" />
+                                            <span className="text-xs font-bold text-red-600">
+                                                BİTİŞ
+                                            </span>
+                                        </div>
+
+                                        <p className="text-sm font-bold text-[#240046]">
+                                            {formatDate(
+                                                new Date(selectedReservation.endDate)
+                                            )}
+                                        </p>
+                                        <p className="mt-1 text-xl font-bold tabular-nums text-red-600">
+                                            {formatTime(
+                                                new Date(selectedReservation.endDate)
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
 
+                            {/* Destination */}
+                            <div className="rounded-2xl border border-gray-100 p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                                        <MapPin size={20} />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium text-gray-400">
+                                            Varış noktası
+                                        </p>
+                                        <p className="mt-1 break-words text-base font-bold text-[#240046]">
+                                            {selectedReservation.destination}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Description */}
                             {selectedReservation.description && (
-                                <div>
-                                    <p className="text-xs text-gray-500">
-                                        Açıklama
-                                    </p>
-                                    <p className="text-sm text-gray-700">
+                                <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4">
+                                    <div className="mb-2 flex items-center gap-2">
+                                        <FileText size={17} className="text-[#974CE0]" />
+                                        <p className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                                            Açıklama
+                                        </p>
+                                    </div>
+                                    <p className="whitespace-pre-wrap break-words text-sm leading-6 text-gray-700">
                                         {selectedReservation.description}
                                     </p>
                                 </div>
                             )}
 
-                            <div>
-                                <p className="text-xs text-gray-500 mb-1">
-                                    Durum
-                                </p>
-                                <span
-                                    className={`inline-flex px-3 py-1 rounded-lg text-xs font-semibold text-white ${statusColors[selectedReservation.status]}`}
-                                >
-                                    {statusLabels[selectedReservation.status]}
-                                </span>
-                            </div>
-
+                            {/* Cancellation info */}
                             {selectedReservation.cancelledAt && (
-                                <div className="border-t pt-4">
-                                    <p className="text-xs text-gray-500">
-                                        İptal eden
-                                    </p>
-                                    <p className="text-sm font-medium">
-                                        {selectedReservation.cancelledByName ||
-                                            "Bilinmiyor"}
+                                <div className="rounded-xl border border-red-100 bg-red-50 p-4">
+                                    <div className="flex items-center gap-2 text-red-600">
+                                        <Ban size={17} />
+                                        <p className="text-sm font-bold">
+                                            Rezervasyon iptal edildi
+                                        </p>
+                                    </div>
+                                    <p className="mt-2 text-sm text-red-700">
+                                        İptal eden:{" "}
+                                        <span className="font-semibold">
+                                            {selectedReservation.cancelledByName || "Bilinmiyor"}
+                                        </span>
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-6 pt-0">
-                            <div className="p-6 pt-0 space-y-3">
-                                {selectedReservation.status === 1 && (
-                                    <>
-                                        <button
-                                            onClick={openEditModal}
-                                            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
-                                        >
-                                            <Pencil size={18} />
-                                            Rezervasyonu Düzenle
-                                        </button>
+                        {/* Actions */}
+                        <div className="space-y-3 border-t border-gray-100 bg-gray-50/70 p-6 sm:px-8">
+                            {selectedReservation.status === 1 && (
+                                <>
+                                    <button
+                                        onClick={openEditModal}
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#5A189A] px-5 py-3.5 text-sm font-semibold text-white shadow-lg shadow-purple-900/15 transition hover:-translate-y-0.5 hover:bg-[#240046]"
+                                    >
+                                        <Pencil size={17} />
+                                        Rezervasyonu Düzenle
+                                    </button>
 
-                                        <button
-                                            onClick={() => {
-                                                const confirmed = window.confirm(
-                                                    "Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
-                                                );
+                                    <button
+                                        onClick={() => {
+                                            const confirmed = window.confirm(
+                                                "Bu rezervasyonu iptal etmek istediğinize emin misiniz?"
+                                            );
 
-                                                if (confirmed) {
-                                                    cancelMutation.mutate(selectedReservation.id);
-                                                }
-                                            }}
-                                            disabled={cancelMutation.isPending}
-                                            className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition disabled:opacity-50"
-                                        >
-                                            {cancelMutation.isPending ? (
-                                                <Loader2 size={18} className="animate-spin" />
-                                            ) : (
-                                                <Trash2 size={18} />
-                                            )}
-                                            Rezervasyonu İptal Et
-                                        </button>
-                                    </>
-                                )}
+                                            if (confirmed) {
+                                                cancelMutation.mutate(selectedReservation.id);
+                                            }
+                                        }}
+                                        disabled={cancelMutation.isPending}
+                                        className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-5 py-3.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {cancelMutation.isPending ? (
+                                            <Loader2 size={17} className="animate-spin" />
+                                        ) : (
+                                            <Trash2 size={17} />
+                                        )}
+                                        Rezervasyonu İptal Et
+                                    </button>
+                                </>
+                            )}
 
-                                <button
-                                    onClick={() => setSelectedReservation(null)}
-                                    className="w-full px-5 py-3 rounded-lg border border-gray-200 text-gray-600 font-semibold hover:bg-gray-50 transition"
-                                >
-                                    Kapat
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setSelectedReservation(null)}
+                                className="w-full rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-600 transition hover:bg-gray-100"
+                            >
+                                Kapat
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
+
         </div>
     );
 }

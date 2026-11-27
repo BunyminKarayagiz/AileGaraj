@@ -3,13 +3,16 @@ import { useState, type FormEvent } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
-    ArrowLeft,
     Plus,
     Car,
     Loader2,
     Pencil,
     X,
     Trash2,
+    Search,
+    Gauge,
+    Fuel,
+    Sparkles,
 } from "lucide-react";
 
 import api from "../services/api";
@@ -24,15 +27,7 @@ interface Vehicle {
     fuelType: string;
     description: string | null;
     createdAt: string;
-}
-
-interface UpdateVehicleRequest {
-    brand: string;
-    model: string;
-    plateNumber: string;
-    modelYear: number;
-    fuelType: string;
-    description: string;
+    imageUrl: string | null;
 }
 
 interface VehicleForm {
@@ -62,6 +57,9 @@ export default function Vehicles() {
     const [editError, setEditError] = useState("");
     const [deletingVehicle, setDeletingVehicle] = useState<Vehicle | null>(null);
     const [deleteError, setDeleteError] = useState("");
+    const [editImage, setEditImage] = useState<File | null>(null);
+    const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const {
         data: vehicles,
@@ -83,7 +81,7 @@ export default function Vehicles() {
             data,
         }: {
             id: number;
-            data: UpdateVehicleRequest;
+            data: FormData;
         }) => {
             const response = await api.put(`/vehicles/${id}`, data);
             return response.data;
@@ -139,6 +137,16 @@ export default function Vehicles() {
         },
     });
 
+    const filteredVehicles = (vehicles ?? []).filter((vehicle) => {
+        const search = searchTerm.toLocaleLowerCase("tr-TR");
+
+        return (
+            vehicle.brand.toLocaleLowerCase("tr-TR").includes(search) ||
+            vehicle.model.toLocaleLowerCase("tr-TR").includes(search) ||
+            vehicle.plateNumber.toLocaleLowerCase("tr-TR").includes(search)
+        );
+    });
+
     const status = (
         error as { response?: { status?: number } } | null
     )?.response?.status;
@@ -156,11 +164,19 @@ export default function Vehicles() {
         });
 
         setEditError("");
+        setEditImage(null);
+        setEditImagePreview(vehicle.imageUrl);
     };
 
     const closeEditModal = () => {
+        if (editImagePreview?.startsWith("blob:")) {
+            URL.revokeObjectURL(editImagePreview);
+        }
+
         setEditingVehicle(null);
         setEditForm(emptyForm);
+        setEditImage(null);
+        setEditImagePreview(null);
         setEditError("");
     };
 
@@ -171,16 +187,25 @@ export default function Vehicles() {
 
         setEditError("");
 
+        const formData = new FormData();
+
+        formData.append("Brand", editForm.brand.trim());
+        formData.append("Model", editForm.model.trim());
+        formData.append(
+            "PlateNumber",
+            editForm.plateNumber.trim().toUpperCase()
+        );
+        formData.append("ModelYear", editForm.modelYear);
+        formData.append("FuelType", editForm.fuelType.trim());
+        formData.append("Description", editForm.description.trim());
+
+        if (editImage) {
+            formData.append("Image", editImage);
+        }
+
         updateVehicleMutation.mutate({
             id: editingVehicle.id,
-            data: {
-                brand: editForm.brand.trim(),
-                model: editForm.model.trim(),
-                plateNumber: editForm.plateNumber.trim().toUpperCase(),
-                modelYear: Number(editForm.modelYear),
-                fuelType: editForm.fuelType.trim(),
-                description: editForm.description.trim(),
-            },
+            data: formData,
         });
     };
 
@@ -192,6 +217,34 @@ export default function Vehicles() {
             ...previous,
             [field]: value,
         }));
+    };
+
+    const handleEditImageChange = (file: File | undefined) => {
+        if (!file) return;
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            setEditError("Sadece JPG, PNG ve WEBP formatları yüklenebilir.");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            setEditError("Görsel boyutu en fazla 10 MB olabilir.");
+            return;
+        }
+
+        if (editImagePreview?.startsWith("blob:")) {
+            URL.revokeObjectURL(editImagePreview);
+        }
+
+        setEditImage(file);
+        setEditImagePreview(URL.createObjectURL(file));
+        setEditError("");
     };
 
     if (isLoading) {
@@ -234,143 +287,258 @@ export default function Vehicles() {
         );
     }
 
+
     return (
         <div className="min-h-screen bg-[#f8f7fa]">
-            <header className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <main className="max-w-7xl mx-auto px-5 sm:px-6 py-8 lg:py-10">
+
+                {/* Sayfa başlığı */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 mb-9">
                     <div>
-                        <h1 className="text-2xl font-bold text-[#240046]">
-                            AileGaraj
+                        <div className="flex items-center gap-2 text-sm text-[#974CE0] font-semibold mb-2">
+                            <Car size={17} />
+                            AİLE GARAJI
+                        </div>
+
+                        <h1 className="text-3xl font-bold tracking-tight text-[#240046]">
+                            Araçlar
                         </h1>
-                        <p className="text-sm text-gray-500">
-                            Araç yönetimi
-                        </p>
-                    </div>
 
-                    <button
-                        onClick={() => navigate("/dashboard")}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                    >
-                        <ArrowLeft size={18} />
-                        Dashboard
-                    </button>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-6 py-10">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                    <div>
-                        <h2 className="text-2xl font-bold text-[#240046]">
-                            Aile Araçları
-                        </h2>
-                        <p className="text-gray-500 mt-1">
-                            Ailene ait araçları buradan görüntüleyebilirsin.
+                        <p className="text-gray-500 mt-2">
+                            Ailene ait araçları görüntüle ve yönet.
                         </p>
                     </div>
 
                     <button
                         onClick={() => navigate("/vehicles/create")}
-                        className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
+                        className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-[#5A189A] text-white font-semibold shadow-lg shadow-purple-200 hover:bg-[#240046] hover:-translate-y-0.5 transition-all duration-200"
                     >
                         <Plus size={19} />
                         Yeni Araç Ekle
                     </button>
                 </div>
 
+                {/* İstatistikler */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500">
+                                    Toplam Araç
+                                </p>
+                                <p className="text-3xl font-bold text-[#240046] mt-2">
+                                    {vehicles?.length ?? 0}
+                                </p>
+                            </div>
+
+                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                                <Car className="text-[#5A189A]" size={23} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500">
+                                    Farklı Marka
+                                </p>
+                                <p className="text-3xl font-bold text-[#240046] mt-2">
+                                    {new Set(vehicles?.map((v) => v.brand)).size}
+                                </p>
+                            </div>
+
+                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                                <Sparkles className="text-[#5A189A]" size={23} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm text-gray-500">
+                                    Toplam Kilometre
+                                </p>
+                                <p className="text-3xl font-bold text-[#240046] mt-2">
+                                    {(vehicles ?? [])
+                                        .reduce((total, vehicle) => total + vehicle.currentMileage, 0)
+                                        .toLocaleString("tr-TR")}
+                                    <span className="text-sm font-medium text-gray-400 ml-1">
+                                        km
+                                    </span>
+                                </p>
+                            </div>
+
+                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                                <Gauge className="text-[#5A189A]" size={23} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Arama alanı */}
+                <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-7 shadow-sm">
+                    <div className="relative">
+                        <Search
+                            size={19}
+                            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Marka, model veya plaka ile araç ara..."
+                            className="w-full pl-12 pr-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:ring-2 focus:ring-purple-200 focus:border-[#974CE0] transition"
+                        />
+                    </div>
+                </div>
+
+                {/* Araç listesi */}
                 {!vehicles || vehicles.length === 0 ? (
-                    <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
-                        <div className="w-16 h-16 rounded-2xl bg-purple-100 flex items-center justify-center mx-auto mb-5">
-                            <Car className="text-[#5A189A]" size={32} />
+                    <div className="bg-white rounded-3xl border border-gray-100 p-12 text-center shadow-sm">
+                        <div className="w-20 h-20 rounded-3xl bg-purple-100 flex items-center justify-center mx-auto mb-5">
+                            <Car className="text-[#5A189A]" size={36} />
                         </div>
 
                         <h3 className="text-xl font-bold text-[#240046] mb-2">
                             Henüz araç eklenmemiş
                         </h3>
 
-                        <p className="text-gray-500 mb-6">
-                            Ailene ait ilk aracı ekleyerek başlayabilirsin.
+                        <p className="text-gray-500 mb-7">
+                            Ailene ait ilk aracı ekleyerek garajını oluşturmaya başlayabilirsin.
                         </p>
 
                         <button
                             onClick={() => navigate("/vehicles/create")}
-                            className="px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
+                            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
                         >
+                            <Plus size={18} />
                             İlk Aracı Ekle
                         </button>
                     </div>
+                ) : filteredVehicles.length === 0 ? (
+                    <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                        <Search size={34} className="text-gray-300 mx-auto mb-4" />
+
+                        <h3 className="font-bold text-gray-800">
+                            Arama sonucu bulunamadı
+                        </h3>
+
+                        <p className="text-sm text-gray-500 mt-2">
+                            Farklı bir marka, model veya plaka deneyebilirsin.
+                        </p>
+                    </div>
                 ) : (
-                    <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
-                        {vehicles.map((vehicle) => (
+                    <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                        {filteredVehicles.map((vehicle) => (
                             <div
                                 key={vehicle.id}
-                                className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm"
+                                className="group bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:shadow-purple-100/60 hover:-translate-y-1 transition-all duration-300"
                             >
-                                <div className="flex items-center justify-between mb-5">
-                                    <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                                        <Car className="text-[#5A189A]" size={25} />
-                                    </div>
+                                {/* Görsel */}
+                                <div className="relative h-52 bg-gradient-to-br from-[#f5efff] to-[#faf8ff] overflow-hidden">
+                                    {vehicle.imageUrl ? (
+                                        <img
+                                            src={vehicle.imageUrl}
+                                            alt={`${vehicle.brand} ${vehicle.model}`}
+                                            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-500"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <Car
+                                                size={76}
+                                                strokeWidth={1.2}
+                                                className="text-[#974CE0]/50"
+                                            />
+                                        </div>
+                                    )}
 
-                                    <span className="px-3 py-1 rounded-lg bg-purple-50 text-[#5A189A] text-sm font-semibold">
+                                    <span className="absolute top-4 right-4 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur text-[#5A189A] text-sm font-bold shadow-sm">
                                         {vehicle.modelYear}
                                     </span>
-                                </div>
 
-                                <h3 className="text-xl font-bold text-[#240046]">
-                                    {vehicle.brand} {vehicle.model}
-                                </h3>
-
-                                <p className="text-sm font-semibold text-gray-500 mt-1">
-                                    {vehicle.plateNumber}
-                                </p>
-
-                                <div className="grid grid-cols-2 gap-3 mt-6">
-                                    <div className="bg-gray-50 rounded-lg p-3">
-                                        <p className="text-xs text-gray-500">
-                                            Kilometre
-                                        </p>
-                                        <p className="font-semibold text-[#240046] mt-1">
-                                            {vehicle.currentMileage.toLocaleString("tr-TR")} km
-                                        </p>
-                                    </div>
-
-                                    <div className="bg-gray-50 rounded-lg p-3">
-                                        <p className="text-xs text-gray-500">
-                                            Yakıt Türü
-                                        </p>
-                                        <p className="font-semibold text-[#240046] mt-1">
-                                            {vehicle.fuelType}
-                                        </p>
+                                    <div className="absolute bottom-4 left-4 px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur text-[#240046] text-sm font-bold shadow-sm">
+                                        {vehicle.plateNumber}
                                     </div>
                                 </div>
 
-                                {vehicle.description && (
-                                    <p className="text-sm text-gray-500 mt-4 border-t pt-4">
-                                        {vehicle.description}
-                                    </p>
-                                )}
+                                {/* Araç bilgileri */}
+                                <div className="p-5">
+                                    <div className="mb-5">
+                                        <h3 className="text-xl font-bold text-[#240046] group-hover:text-[#5A189A] transition-colors">
+                                            {vehicle.brand} {vehicle.model}
+                                        </h3>
 
-                                <button
-                                    onClick={() => openEditModal(vehicle)}
-                                    className="w-full mt-5 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-[#974CE0] text-[#5A189A] font-semibold hover:bg-purple-50 transition"
-                                >
-                                    <Pencil size={17} />
-                                    Düzenle
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setDeletingVehicle(vehicle);
-                                        setDeleteError("");
-                                    }}
-                                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-red-200 text-red-600 font-semibold hover:bg-red-50 transition"
-                                >
-                                    <Trash2 size={17} />
-                                    Aracı Pasife Al
-                                </button>
+                                        {vehicle.description && (
+                                            <p className="text-sm text-gray-500 mt-2 line-clamp-2">
+                                                {vehicle.description}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-gray-50 rounded-xl p-3">
+                                            <div className="flex items-center gap-2 text-gray-400 mb-2">
+                                                <Gauge size={15} />
+                                                <span className="text-xs">
+                                                    Kilometre
+                                                </span>
+                                            </div>
+
+                                            <p className="font-bold text-[#240046]">
+                                                {vehicle.currentMileage.toLocaleString("tr-TR")} km
+                                            </p>
+                                        </div>
+
+                                        <div className="bg-gray-50 rounded-xl p-3">
+                                            <div className="flex items-center gap-2 text-gray-400 mb-2">
+                                                <Fuel size={15} />
+                                                <span className="text-xs">
+                                                    Yakıt Türü
+                                                </span>
+                                            </div>
+
+                                            <p className="font-bold text-[#240046] truncate">
+                                                {vehicle.fuelType}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2 mt-5">
+                                        <button
+                                            onClick={() => openEditModal(vehicle)}
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-purple-50 text-[#5A189A] font-semibold hover:bg-purple-100 transition-colors"
+                                        >
+                                            <Pencil size={16} />
+                                            Düzenle
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setDeletingVehicle(vehicle);
+                                                setDeleteError("");
+                                            }}
+                                            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-red-50 text-red-600 font-semibold hover:bg-red-100 transition-colors"
+                                            title="Aracı pasife al"
+                                        >
+                                            <Trash2 size={17} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         ))}
                     </div>
                 )}
+
+                <div className="text-sm text-gray-400 mt-6 text-right">
+                    {filteredVehicles.length} araç listeleniyor
+                </div>
             </main>
+
+            {/* Mevcut düzenleme ve silme modalı kodların burada aynen kalacak */}
+
 
             {editingVehicle && (
                 <div
@@ -478,6 +646,53 @@ export default function Vehicles() {
                                         required
                                         className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-[#974CE0]"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Araç Görseli */}
+                            <div className="mt-5">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Araç Görseli
+                                </label>
+
+                                <div className="flex flex-col sm:flex-row gap-5 items-start">
+                                    <div className="w-full sm:w-56 h-36 rounded-xl overflow-hidden bg-purple-50 border border-gray-200 flex items-center justify-center">
+                                        {editImagePreview ? (
+                                            <img
+                                                src={editImagePreview}
+                                                alt="Araç görseli"
+                                                className="w-full h-full object-cover"
+                                            />
+                                        ) : (
+                                            <Car size={42} className="text-[#5A189A]" />
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1">
+                                        <label className="inline-flex items-center gap-2 px-4 py-3 rounded-lg bg-purple-50 text-[#5A189A] font-semibold cursor-pointer hover:bg-purple-100 transition">
+                                            <Pencil size={17} />
+                                            Görseli Değiştir
+
+                                            <input
+                                                type="file"
+                                                accept="image/jpeg,image/png,image/webp"
+                                                className="hidden"
+                                                onChange={(e) =>
+                                                    handleEditImageChange(e.target.files?.[0])
+                                                }
+                                            />
+                                        </label>
+
+                                        <p className="text-xs text-gray-500 mt-3">
+                                            JPG, PNG veya WEBP. Maksimum dosya boyutu 10 MB.
+                                        </p>
+
+                                        {editImage && (
+                                            <p className="text-sm text-green-600 mt-2">
+                                                Yeni görsel seçildi.
+                                            </p>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
