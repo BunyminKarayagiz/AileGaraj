@@ -13,6 +13,12 @@ import {
     Settings,
     Save,
     X,
+    Mail,
+    Phone,
+    CalendarDays,
+    Crown,
+    UserRound,
+    LogOut,
 } from "lucide-react";
 
 import {
@@ -37,6 +43,8 @@ interface FamilyMember {
     id: number;
     firstName: string;
     lastName: string;
+    email: string;
+    phoneNumber: string | null;
     role: string;
     joinedAt: string;
     isCurrentUser: boolean;
@@ -356,6 +364,40 @@ export default function Family() {
         },
     });
 
+    // Aileden ayrılma
+
+    const leaveFamilyMutation = useMutation({
+        mutationFn: async () => {
+            await api.post(`/families/${family!.id}/leave`);
+        },
+        onSuccess: async () => {
+            queryClient.setQueryData(["my-family"], null);
+
+            queryClient.removeQueries({
+                queryKey: ["family-members", family!.id],
+            });
+
+            await queryClient.invalidateQueries({
+                queryKey: ["my-family"],
+            });
+
+            navigate("/dashboard", { replace: true });
+        },
+        onError: (err) => {
+            const message = (
+                err as {
+                    response?: {
+                        data?: { message?: string };
+                    };
+                }
+            )?.response?.data?.message;
+
+            setError(
+                message || "Aileden ayrılırken bir hata oluştu."
+            );
+        },
+    });
+
     // Davetiye oluşturma
 
     const handleCreateInvitation = () => {
@@ -403,6 +445,19 @@ export default function Family() {
         if (!confirmed) return;
 
         removeMemberMutation.mutate(member.id);
+    };
+
+    const handleLeaveFamily = () => {
+        const confirmed = window.confirm(
+            "Bu aileden ayrılmak istediğine emin misin? Ayrıldıktan sonra aile bilgilerine ve araçlara erişimin olmayacak."
+        );
+
+        if (!confirmed) return;
+
+        setError("");
+        setSuccess("");
+
+        leaveFamilyMutation.mutate();
     };
 
     // İzin modalını açma
@@ -519,14 +574,30 @@ export default function Family() {
             <main className="max-w-7xl mx-auto px-6 py-10">
                 {/* Aile başlığı */}
 
-                <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-[#240046]">
-                        {family.name}
-                    </h2>
+                <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-[#240046]">
+                            {family.name}
+                        </h2>
 
-                    <p className="text-gray-500 mt-1">
-                        Aile üyelerini ve davet işlemlerini buradan yönetebilirsin.
-                    </p>
+                        <p className="text-gray-500 mt-1">
+                            Aile üyelerini ve davet işlemlerini buradan yönetebilirsin.
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={handleLeaveFamily}
+                        disabled={leaveFamilyMutation.isPending}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-red-200 bg-red-50 text-red-600 font-semibold hover:bg-red-100 transition disabled:opacity-50"
+                    >
+                        {leaveFamilyMutation.isPending ? (
+                            <Loader2 size={18} className="animate-spin" />
+                        ) : (
+                            <LogOut size={18} />
+                        )}
+
+                        Aileden Ayrıl
+                    </button>
                 </div>
 
                 {/* Bildirimler */}
@@ -663,113 +734,145 @@ export default function Family() {
 
                 {/* Aile üyeleri */}
 
-                <section className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                    <div className="p-6 border-b border-gray-200">
-                        <h3 className="text-lg font-bold text-[#240046]">
-                            Aile Üyeleri
-                        </h3>
 
-                        <p className="text-sm text-gray-500 mt-1">
-                            Ailene kayıtlı aktif üyeler.
-                        </p>
+                {/* Aile Üyeleri */}
+                <section className="space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                            <h2 className="text-xl font-bold text-gray-900">
+                                Aile Üyeleri
+                            </h2>
+                            <p className="text-sm text-gray-500 mt-1">
+                                Aile hesabına bağlı üyeleri buradan yönetebilirsin.
+                            </p>
+                        </div>
+
+                        <span className="w-fit rounded-full bg-purple-100 text-purple-700 px-3 py-1 text-sm font-semibold">
+                            {members?.length ?? 0} Üye
+                        </span>
                     </div>
 
-                    <div className="divide-y divide-gray-100">
-                        {members.map((member) => (
-                            <div
-                                key={member.id}
-                                className="p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-                            >
-                                <div>
-                                    <p className="font-semibold text-gray-800">
-                                        {member.firstName}{" "}
-                                        {member.lastName}
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                        {members?.map((member) => {
+                            const fullName =
+                                `${member.firstName} ${member.lastName}`.trim();
 
-                                        {member.isCurrentUser && (
-                                            <span className="ml-2 text-xs text-[#5A189A]">
-                                                (Sen)
+                            const initials =
+                                `${member.firstName?.[0] ?? ""}${member.lastName?.[0] ?? ""}`
+                                    .toUpperCase();
+
+                            return (
+                                <div
+                                    key={member.id}
+                                    className="group bg-white border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-lg hover:border-purple-200 transition-all duration-300"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="w-14 h-14 shrink-0 rounded-2xl bg-gradient-to-br from-[#5A189A] to-[#974CE0] flex items-center justify-center text-white text-lg font-bold shadow-md shadow-purple-200">
+                                                {initials || "?"}
+                                            </div>
+
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="font-bold text-gray-900 truncate">
+                                                        {fullName || "İsimsiz Üye"}
+                                                    </h3>
+
+                                                    {member.isCurrentUser && (
+                                                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+                                                            Sen
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-1.5 mt-1">
+                                                    {member.role === "FamilyAdmin" ? (
+                                                        <Crown size={14} className="text-amber-500" />
+                                                    ) : (
+                                                        <UserRound size={14} className="text-gray-400" />
+                                                    )}
+
+                                                    <span className="text-xs font-medium text-gray-500">
+                                                        {member.role === "FamilyAdmin"
+                                                            ? "Aile Yöneticisi"
+                                                            : "Aile Üyesi"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-5 space-y-3 border-t border-gray-100 pt-4">
+                                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                                            <Mail size={16} className="text-purple-500 shrink-0" />
+                                            <span className="truncate">
+                                                {member.email || "E-posta bilgisi yok"}
                                             </span>
-                                        )}
-                                    </p>
+                                        </div>
 
-                                    <p className="text-sm text-gray-500 mt-1">
-                                        Katılım:{" "}
-                                        {new Date(
-                                            member.joinedAt
-                                        ).toLocaleDateString("tr-TR")}
-                                    </p>
-                                </div>
+                                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                                            <Phone size={16} className="text-purple-500 shrink-0" />
+                                            <span>
+                                                {member.phoneNumber || "Telefon eklenmemiş"}
+                                            </span>
+                                        </div>
 
-                                <div className="flex flex-wrap items-center gap-3">
-                                    {isAdmin && !member.isCurrentUser ? (
-                                        <select
-                                            value={member.role}
-                                            disabled={changeRoleMutation.isPending}
-                                            onChange={(e) =>
-                                                handleChangeRole(
-                                                    member.id,
-                                                    e.target.value
-                                                )
-                                            }
-                                            className="px-3 py-2 rounded-lg border border-gray-300 text-sm outline-none focus:ring-2 focus:ring-[#974CE0] disabled:opacity-50"
-                                        >
-                                            <option value="FamilyMember">
-                                                Aile Üyesi
-                                            </option>
-
-                                            <option value="FamilyAdmin">
-                                                Aile Yöneticisi
-                                            </option>
-                                        </select>
-                                    ) : (
-                                        <span className="px-3 py-2 rounded-lg bg-purple-50 text-[#5A189A] text-sm font-medium">
-                                            {member.role === "FamilyAdmin"
-                                                ? "Aile Yöneticisi"
-                                                : "Aile Üyesi"}
-                                        </span>
-                                    )}
-
-                                    {/* Üye izinlerini yönetme */}
-
-                                    {isAdmin &&
-                                        member.role === "FamilyMember" &&
-                                        !member.isCurrentUser && (
-                                            <button
-                                                onClick={() =>
-                                                    handleOpenPermissions(member)
-                                                }
-                                                title="Üye izinlerini yönet"
-                                                className="p-2 rounded-lg text-[#5A189A] hover:bg-purple-50"
-                                            >
-                                                <Settings size={18} />
-                                            </button>
-                                        )}
-
-                                    {/* Üyeyi çıkarma */}
+                                        <div className="flex items-center gap-3 text-sm text-gray-600">
+                                            <CalendarDays size={16} className="text-purple-500 shrink-0" />
+                                            <span>
+                                                Katılım: {new Date(member.joinedAt).toLocaleDateString("tr-TR")}
+                                            </span>
+                                        </div>
+                                    </div>
 
                                     {isAdmin && !member.isCurrentUser && (
-                                        <button
-                                            onClick={() =>
-                                                handleRemoveMember(member)
-                                            }
-                                            disabled={removeMemberMutation.isPending}
-                                            title="Üyeyi aileden çıkar"
-                                            className="p-2 rounded-lg text-red-500 hover:bg-red-50 disabled:opacity-50"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex items-center gap-2">
+                                                <Shield size={16} className="text-gray-400" />
+
+                                                <select
+                                                    value={member.role}
+                                                    onChange={(e) =>
+                                                        handleChangeRole(member.id, e.target.value)
+                                                    }
+                                                    className="text-sm font-medium bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400"
+                                                >
+                                                    <option value="FamilyMember">
+                                                        Aile Üyesi
+                                                    </option>
+                                                    <option value="FamilyAdmin">
+                                                        Yönetici
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                {member.role === "FamilyMember" && (
+                                                    <button
+                                                        onClick={() => handleOpenPermissions(member)}
+                                                        className="p-2.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors"
+                                                        title="Yetkileri düzenle"
+                                                    >
+                                                        <Settings size={18} />
+                                                    </button>
+                                                )}
+
+                                                <button
+                                                    onClick={() => handleRemoveMember(member)}
+                                                    className="p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                                                    title="Üyeyi aileden çıkar"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                        ))}
-
-                        {members.length === 0 && (
-                            <div className="p-8 text-center text-gray-500">
-                                Henüz aile üyesi bulunmuyor.
-                            </div>
-                        )}
+                            );
+                        })}
                     </div>
                 </section>
+
             </main>
 
             {/* İzin yönetimi modalı */}

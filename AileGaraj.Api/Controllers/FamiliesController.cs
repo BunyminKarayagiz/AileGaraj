@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using AileGaraj.Api.Services.Verification.Interfaces;
+
 
 namespace AileGaraj.Api.Controllers;
 
@@ -16,10 +18,13 @@ namespace AileGaraj.Api.Controllers;
 public class FamiliesController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
+    private readonly IUserVerificationService _verificationService;
 
-    public FamiliesController(ApplicationDbContext context)
+    public FamiliesController(ApplicationDbContext context,
+         IUserVerificationService verificationService)
     {
         _context = context;
+        _verificationService = verificationService;
     }
 
     [HttpPost]
@@ -58,6 +63,16 @@ public class FamiliesController : ControllerBase
             CreatedAt = now,
             IsActive = true
         };
+
+        var isVerified = await _verificationService.IsUserVerifiedAsync(userId);
+
+        if (!isVerified)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                message = "Aile oluşturabilmek için önce e-posta adresinizi doğrulamanız gerekiyor."
+            });
+        }
 
         _context.Families.Add(family);
 
@@ -388,6 +403,8 @@ public class FamiliesController : ControllerBase
                 Id = x.Id,
                 FirstName = x.FirstNameSnapshot,
                 LastName = x.LastNameSnapshot,
+                Email = x.User.Email ?? string.Empty,
+                PhoneNumber = x.User.PhoneNumber,
                 Role = x.Role,
                 JoinedAt = x.JoinedAt,
                 IsCurrentUser = x.UserId == userId
@@ -525,10 +542,14 @@ public class FamiliesController : ControllerBase
         return Ok(new { message = "Üye aileden çıkarıldı." });
     }
 
+
     [HttpPost("{familyId:int}/leave")]
     public async Task<IActionResult> LeaveFamily(int familyId)
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
 
         var membership = await _context.FamilyMembers
             .Include(x => x.Family)
@@ -539,27 +560,62 @@ public class FamiliesController : ControllerBase
                 x.Family.IsActive);
 
         if (membership == null)
-            return NotFound(new { message = "Aktif aile üyeliğiniz bulunamadı." });
+            return NotFound(new
+            {
+                message = "Aktif aile üyeliğiniz bulunamadı."
+            });
 
-        if (membership.Role == FamilyRoles.Admin)
-        {
-            var adminCount = await _context.FamilyMembers.CountAsync(x =>
+        // Ailedeki diğer aktif üyeleri kontrol et.
+        var otherActiveMemberCount = await _context.FamilyMembers
+            .CountAsync(x =>
                 x.FamilyId == familyId &&
                 x.IsActive &&
-                x.Role == FamilyRoles.Admin);
+                x.UserId != userId);
 
-            if (adminCount <= 1)
+        // Başka üye varsa son yönetici ayrılamaz.
+        if (membership.Role == FamilyRoles.Admin &&
+            otherActiveMemberCount > 0)
+        {
+            var otherAdminExists = await _context.FamilyMembers
+                .AnyAsync(x =>
+                    x.FamilyId == familyId &&
+                    x.IsActive &&
+                    x.UserId != userId &&
+                    x.Role == FamilyRoles.Admin);
+
+            if (!otherAdminExists)
+            {
                 return BadRequest(new
                 {
                     message = "Ailenin son yöneticisisiniz. Ayrılmadan önce başka bir üyeyi yönetici yapmalısınız."
                 });
+            }
         }
 
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        var now = DateTime.UtcNow;
+
         membership.IsActive = false;
-        membership.LeftAt = DateTime.UtcNow;
+        membership.LeftAt = now;
+
+        // Ailede başka aktif üye kalmadıysa aileyi de pasife al.
+        if (otherActiveMemberCount == 0)
+        {
+            membership.Family.IsActive = false;
+            membership.Family.UpdatedAt = now;
+        }
 
         await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
 
-        return Ok(new { message = "Aileden başarıyla ayrıldınız." });
+        return Ok(new
+        {
+            message = otherActiveMemberCount == 0
+                ? "Aileden ayrıldınız. Başka aktif üye bulunmadığı için aile de kapatıldı."
+                : "Aileden başarıyla ayrıldınız."
+        });
     }
+
 }

@@ -1,24 +1,21 @@
-﻿
-import { useState, type FormEvent } from "react";
+﻿import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Car } from "lucide-react";
+import {
+    ArrowLeft,
+    Loader2,
+    Car,
+    ImagePlus,
+    X,
+} from "lucide-react";
 
 import api from "../services/api";
-
-interface CreateVehicleRequest {
-    brand: string;
-    model: string;
-    plateNumber: string;
-    modelYear: number;
-    currentMileage: number;
-    fuelType: string;
-    description: string;
-}
 
 export default function VehicleCreate() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const [image, setImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const [brand, setBrand] = useState("");
     const [model, setModel] = useState("");
@@ -29,8 +26,16 @@ export default function VehicleCreate() {
     const [description, setDescription] = useState("");
     const [error, setError] = useState("");
 
+    useEffect(() => {
+        return () => {
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+        };
+    }, [imagePreview]);
+
     const createVehicleMutation = useMutation({
-        mutationFn: async (data: CreateVehicleRequest) => {
+        mutationFn: async (data: FormData) => {
             const response = await api.post("/vehicles", data);
             return response.data;
         },
@@ -63,19 +68,59 @@ export default function VehicleCreate() {
         },
     });
 
+    const handleImageChange = (file: File | undefined) => {
+        setError("");
+
+        if (!file) return;
+
+        const allowedTypes = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            setError("Sadece JPG, PNG ve WEBP formatları yüklenebilir.");
+            return;
+        }
+
+        const maxFileSize = 10 * 1024 * 1024;
+
+        if (file.size > maxFileSize) {
+            setError("Görsel boyutu en fazla 10 MB olabilir.");
+            return;
+        }
+
+        if (file.size === 0) {
+            setError("Boş bir görsel seçilemez.");
+            return;
+        }
+
+        const previewUrl = URL.createObjectURL(file);
+
+        setImage(file);
+        setImagePreview(previewUrl);
+    };
+
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         setError("");
 
-        createVehicleMutation.mutate({
-            brand: brand.trim(),
-            model: model.trim(),
-            plateNumber: plateNumber.trim().toUpperCase(),
-            modelYear: Number(modelYear),
-            currentMileage: Number(currentMileage),
-            fuelType: fuelType.trim(),
-            description: description.trim(),
-        });
+        const formData = new FormData();
+
+        formData.append("Brand", brand.trim());
+        formData.append("Model", model.trim());
+        formData.append("PlateNumber", plateNumber.trim().toUpperCase());
+        formData.append("ModelYear", modelYear);
+        formData.append("CurrentMileage", currentMileage);
+        formData.append("FuelType", fuelType.trim());
+        formData.append("Description", description.trim());
+
+        if (image) {
+            formData.append("Image", image);
+        }
+
+        createVehicleMutation.mutate(formData);
     };
 
     return (
@@ -125,6 +170,82 @@ export default function VehicleCreate() {
                             {error}
                         </div>
                     )}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Araç Fotoğrafı
+                            <span className="text-gray-400 font-normal ml-1">
+                                (İsteğe bağlı)
+                            </span>
+                        </label>
+
+                        {imagePreview ? (
+                            <div className="relative rounded-xl border border-gray-200 overflow-hidden">
+                                <img
+                                    src={imagePreview}
+                                    alt="Araç önizlemesi"
+                                    className="w-full h-64 object-cover"
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setImage(null);
+                                        setImagePreview(null);
+                                    }}
+                                    className="absolute top-3 right-3 p-2 rounded-full bg-white shadow-md text-red-600 hover:bg-red-50 transition"
+                                    title="Fotoğrafı kaldır"
+                                >
+                                    <X size={20} />
+                                </button>
+
+                                <div className="p-3 bg-gray-50 flex items-center justify-between">
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-medium text-gray-700 truncate">
+                                            {image?.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {((image?.size ?? 0) / (1024 * 1024)).toFixed(2)} MB
+                                        </p>
+                                    </div>
+
+                                    <label className="cursor-pointer text-sm font-semibold text-[#5A189A] hover:text-[#240046]">
+                                        Değiştir
+                                        <input
+                                            type="file"
+                                            accept="image/jpeg,image/png,image/webp"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                handleImageChange(e.target.files?.[0]);
+                                                e.target.value = "";
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                            </div>
+                        ) : (
+                            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer bg-gray-50 hover:bg-purple-50 hover:border-[#974CE0] transition">
+                                <ImagePlus size={36} className="text-[#974CE0] mb-3" />
+
+                                <span className="text-sm font-semibold text-gray-700">
+                                    Fotoğraf seçmek için tıkla
+                                </span>
+
+                                <span className="text-xs text-gray-400 mt-2">
+                                    JPG, PNG veya WEBP · Maksimum 10 MB
+                                </span>
+
+                                <input
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        handleImageChange(e.target.files?.[0]);
+                                        e.target.value = "";
+                                    }}
+                                />
+                            </label>
+                        )}
+                    </div>
 
                     <div className="grid sm:grid-cols-2 gap-5">
                         <div>

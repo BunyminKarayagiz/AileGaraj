@@ -51,6 +51,7 @@ export interface MemberReservationReport {
     reservationCount: number;
     completedReservationCount: number;
     usageHours: number;
+    cancelledReservationCount: number;
 }
 
 export interface VehicleReservationReport {

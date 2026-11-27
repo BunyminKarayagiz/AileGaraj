@@ -1,0 +1,433 @@
+From e097900b7d378237aadcf7b4087deb37da5d4eee Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 25 Nov 2026 14:28:57 +0300
+Subject: [PATCH] =?UTF-8?q?=C3=96ncelikli=20g=C3=BCvenlik=20ve=20tutarl?=
+ =?UTF-8?q?=C4=B1l=C4=B1k=20sorunlar=C4=B1n=C4=B1=20d=C3=BCzelt?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- JWT anahtarını repodan çıkar; user-secrets/ortam değişkeni zorunlu kıl,
+  kısa veya daha önce yayınlanmış anahtarla açılışı reddet.
+- Oturum doğrulamada session.UserId'nin token'daki kullanıcıyla eşleştiğini
+  kontrol et.
+- İstemciye 401'de otomatik, tek seferlik (single-flight) token yenileme ekle.
+- GET /api/reservations için ReservationViewOwn/ViewOthers izinlerini uygula.
+- Rezervasyon oluşturma/düzenlemede araç bazlı sp_getapplock ile çakışma
+  kontrolündeki yarış durumunu kapat.
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01AcWMDe141JutJ5EcujuvG8
+---
+ AileGaraj.Api/AileGaraj.Api.csproj            |   1 +
+ .../Controllers/ReservationsController.cs     |  75 +++++++++++
+ .../Middleware/SessionValidationMiddleware.cs |  11 +-
+ AileGaraj.Api/Program.cs                      |  25 +++-
+ AileGaraj.Api/appsettings.json                |   2 +-
+ README.md                                     |  18 +++
+ ailegaraj-client/src/services/api.ts          | 119 ++++++++++++++++--
+ 7 files changed, 239 insertions(+), 12 deletions(-)
+
+diff --git a/AileGaraj.Api/AileGaraj.Api.csproj b/AileGaraj.Api/AileGaraj.Api.csproj
+index 58f475b..e74661a 100644
+--- a/AileGaraj.Api/AileGaraj.Api.csproj
++++ b/AileGaraj.Api/AileGaraj.Api.csproj
+@@ -4,6 +4,7 @@
+     <TargetFramework>net10.0</TargetFramework>
+     <Nullable>enable</Nullable>
+     <ImplicitUsings>enable</ImplicitUsings>
++    <UserSecretsId>6a20ee64-a3a4-469f-8298-acb8f6ae01ac</UserSecretsId>
+   </PropertyGroup>
+ 
+   <ItemGroup>
+diff --git a/AileGaraj.Api/Controllers/ReservationsController.cs b/AileGaraj.Api/Controllers/ReservationsController.cs
+index a39b84c..950785c 100644
+--- a/AileGaraj.Api/Controllers/ReservationsController.cs
++++ b/AileGaraj.Api/Controllers/ReservationsController.cs
+@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Authorization;
+ using Microsoft.AspNetCore.Mvc;
+ using Microsoft.EntityFrameworkCore;
+ using AileGaraj.Api.Filters;
++using Microsoft.Data.SqlClient;
++using System.Data;
+ 
+ namespace AileGaraj.Api.Controllers;
+ 
+@@ -31,9 +33,24 @@ public class ReservationsController : FamilyBaseController
+     [HttpGet]
+     public async Task<IActionResult> GetReservations()
+     {
++        // Görüntüleme izinleri: kendi ve başkalarının rezervasyonları ayrı
++        // ayrı kontrol edilir (ExpensesController ile aynı yaklaşım).
++        var canViewOwn = await _familyAuthorizationService
++            .HasPermissionAsync(User, PermissionCodes.ReservationViewOwn);
++
++        var canViewOthers = await _familyAuthorizationService
++            .HasPermissionAsync(User, PermissionCodes.ReservationViewOthers);
++
++        if (!canViewOwn && !canViewOthers)
++            return Forbid();
++
++        var currentMemberId = CurrentMembership.Id;
+ 
+         var reservations = await _context.Reservations
+             .Where(x => x.Vehicle.FamilyId == CurrentMembership.FamilyId)
++            .Where(x =>
++                (canViewOwn && x.FamilyMemberId == currentMemberId) ||
++                (canViewOthers && x.FamilyMemberId != currentMemberId))
+             .OrderByDescending(x => x.StartDate)
+             .Select(x => new ReservationResponse
+             {
+@@ -116,6 +133,15 @@ public class ReservationsController : FamilyBaseController
+         if (vehicle == null)
+             return NotFound(new { message = "Aktif araç bulunamadı." });
+ 
++        // Çakışma kontrolü ile kayıt arasında aynı araç için başka bir istek
++        // araya girmesin diye araç bazlı kilit alınır. Kilit, transaction
++        // sonlanınca (commit veya rollback) otomatik bırakılır.
++        await using var transaction =
++            await _context.Database.BeginTransactionAsync();
++
++        if (!await TryAcquireVehicleLockAsync(vehicle.Id))
++            return Conflict(new { message = LockBusyMessage });
++
+         var hasConflict = await _context.Reservations.AnyAsync(x =>
+             x.VehicleId == request.VehicleId &&
+             x.Status == ReservationStatus.Reserved &&
+@@ -146,6 +172,7 @@ public class ReservationsController : FamilyBaseController
+         _context.Reservations.Add(reservation);
+ 
+         await _context.SaveChangesAsync();
++        await transaction.CommitAsync();
+ 
+         return Ok(new
+         {
+@@ -210,6 +237,23 @@ public class ReservationsController : FamilyBaseController
+                 message = "Bitiş tarihi başlangıç tarihinden sonra olmalıdır."
+             });
+ 
++        // Çakışma kontrolü ile kayıt arasında başka bir istek araya girmesin
++        // diye araç bazlı kilit alınır (bkz. CreateReservation).
++        await using var transaction =
++            await _context.Database.BeginTransactionAsync();
++
++        if (!await TryAcquireVehicleLockAsync(reservation.VehicleId))
++            return Conflict(new { message = LockBusyMessage });
++
++        // Kilidi beklerken rezervasyon iptal edilmiş veya tamamlanmış olabilir.
++        await _context.Entry(reservation).ReloadAsync();
++
++        if (reservation.Status != ReservationStatus.Reserved)
++            return BadRequest(new
++            {
++                message = "Yalnızca aktif rezervasyonlar düzenlenebilir."
++            });
++
+         // Aynı araç için başka bir rezervasyonla çakışma kontrolü.
+         var hasConflict = await _context.Reservations.AnyAsync(x =>
+             x.Id != id &&
+@@ -230,6 +274,7 @@ public class ReservationsController : FamilyBaseController
+         reservation.Description = request.Description?.Trim();
+ 
+         await _context.SaveChangesAsync();
++        await transaction.CommitAsync();
+ 
+         return Ok(new
+         {
+@@ -299,5 +344,35 @@ public class ReservationsController : FamilyBaseController
+         });
+     }
+ 
++    private const string LockBusyMessage =
++        "Bu araç için başka bir rezervasyon işlemi sürüyor. Lütfen tekrar deneyin.";
+ 
++    // Aynı araç için rezervasyon oluşturma/düzenleme işlemlerini sıraya sokar.
++    // Mutlaka açık bir transaction içinde çağrılmalıdır; kilit transaction
++    // bitince otomatik bırakılır. SQL Server'da zaman aralığı için
++    // "exclusion constraint" olmadığından çakışmayı veritabanı garanti edemez,
++    // bu yüzden uygulama katmanında kilit kullanılır.
++    private async Task<bool> TryAcquireVehicleLockAsync(int vehicleId)
++    {
++        var result = new SqlParameter("@result", SqlDbType.Int)
++        {
++            Direction = ParameterDirection.Output
++        };
++
++        var resource = new SqlParameter(
++            "@resource",
++            $"AileGaraj:reservation:vehicle:{vehicleId}");
++
++        await _context.Database.ExecuteSqlRawAsync(
++            "EXEC @result = sp_getapplock " +
++            "@Resource = @resource, " +
++            "@LockMode = 'Exclusive', " +
++            "@LockOwner = 'Transaction', " +
++            "@LockTimeout = 5000;",
++            result,
++            resource);
++
++        // 0 ve 1: kilit alındı. Negatif değerler: zaman aşımı, deadlock vb.
++        return result.Value is int code && code >= 0;
++    }
+ }
+diff --git a/AileGaraj.Api/Middleware/SessionValidationMiddleware.cs b/AileGaraj.Api/Middleware/SessionValidationMiddleware.cs
+index 89837c3..0c96bbb 100644
+--- a/AileGaraj.Api/Middleware/SessionValidationMiddleware.cs
++++ b/AileGaraj.Api/Middleware/SessionValidationMiddleware.cs
+@@ -1,3 +1,4 @@
++using System.Security.Claims;
+ using AileGaraj.Api.Data;
+ using Microsoft.EntityFrameworkCore;
+ 
+@@ -19,8 +20,10 @@ public class SessionValidationMiddleware
+ 		if (context.User.Identity?.IsAuthenticated == true)
+ 		{
+ 			var sessionClaim = context.User.FindFirst("sid")?.Value;
++			var tokenUserId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+ 
+-			if (!int.TryParse(sessionClaim, out var sessionId))
++			if (!int.TryParse(sessionClaim, out var sessionId) ||
++				string.IsNullOrEmpty(tokenUserId))
+ 			{
+ 				context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+ 				return;
+@@ -28,10 +31,14 @@ public class SessionValidationMiddleware
+ 
+ 			var now = DateTime.UtcNow;
+ 
++			// Oturum, token'daki kullanıcıya ait olmalıdır. Yalnızca oturum
++			// numarasına bakmak, başka bir kullanıcının oturumuyla imzalı
++			// token kullanılmasına izin verirdi.
+ 			var session = await db.ActiveSessions
+ 				.Include(x => x.User)
+ 				.FirstOrDefaultAsync(x =>
+ 					x.Id == sessionId &&
++					x.UserId == tokenUserId &&
+ 					x.RevokedAt == null);
+ 
+ 			if (session == null ||
+@@ -55,4 +62,4 @@ public class SessionValidationMiddleware
+ 
+ 		await _next(context);
+ 	}
+-}
+\ No newline at end of file
++}
+diff --git a/AileGaraj.Api/Program.cs b/AileGaraj.Api/Program.cs
+index 4f0b901..e16c251 100644
+--- a/AileGaraj.Api/Program.cs
++++ b/AileGaraj.Api/Program.cs
+@@ -44,8 +44,29 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
+ .AddDefaultTokenProviders();
+ 
+ // JWT yapılandırması
+-var jwtKey = builder.Configuration["Jwt:Key"]
+-    ?? throw new InvalidOperationException("JWT anahtarı bulunamadı.");
++// Anahtar repoda tutulmaz: geliştirmede `dotnet user-secrets`, üretimde
++// ortam değişkeni (Jwt__Key) ile verilir. Ayrıntı için README'ye bakın.
++var jwtKey = builder.Configuration["Jwt:Key"];
++
++if (string.IsNullOrWhiteSpace(jwtKey))
++    throw new InvalidOperationException(
++        "JWT anahtarı bulunamadı. 'Jwt:Key' değerini user-secrets veya " +
++        "ortam değişkeni (Jwt__Key) ile tanımlayın.");
++
++// HS256 için en az 256 bit (32 bayt) gerekir.
++if (Encoding.UTF8.GetByteCount(jwtKey) < 32)
++    throw new InvalidOperationException(
++        "JWT anahtarı en az 32 bayt (256 bit) uzunluğunda olmalıdır.");
++
++// Daha önce public repoda yayınlanmış anahtar artık güvenli değildir;
++// yanlışlıkla tekrar kullanılırsa uygulama açılmasın.
++const string leakedJwtKey =
++    "1tFTKaEXtNIIawoKwyUXtw3PKkF1xnybVtDQt55cDLRMCylhjsU8VbwlLIRPyW1GCkBMMgCp+7FzQbHIZ1/VuQ==";
++
++if (jwtKey == leakedJwtKey)
++    throw new InvalidOperationException(
++        "Bu JWT anahtarı daha önce repoda yayınlandı ve güvenli değil. " +
++        "Yeni bir anahtar üretin (ör. 'openssl rand -base64 64').");
+ 
+ var jwtIssuer = builder.Configuration["Jwt:Issuer"]
+     ?? throw new InvalidOperationException("JWT Issuer bulunamadı.");
+diff --git a/AileGaraj.Api/appsettings.json b/AileGaraj.Api/appsettings.json
+index 97cad06..9c44da7 100644
+--- a/AileGaraj.Api/appsettings.json
++++ b/AileGaraj.Api/appsettings.json
+@@ -9,7 +9,7 @@
+     "DefaultConnection": "Server=localhost;Database=AileGarajDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true"
+   },
+   "Jwt": {
+-    "Key": "1tFTKaEXtNIIawoKwyUXtw3PKkF1xnybVtDQt55cDLRMCylhjsU8VbwlLIRPyW1GCkBMMgCp+7FzQbHIZ1/VuQ==",
++    "Key": "",
+     "Issuer": "AileGaraj",
+     "Audience": "AileGarajClient",
+     "AccessTokenExpirationMinutes": 15
+diff --git a/README.md b/README.md
+index 81295d0..2be98c4 100644
+--- a/README.md
++++ b/README.md
+@@ -149,6 +149,24 @@ Server ortamınıza göre yapılandırın.
+ `appsettings.json` veya güvenli kullanıcı sırları üzerinden bağlantı
+ bilgilerinizi tanımlayın.
+ 
++#### JWT anahtarı (zorunlu)
++
++JWT imzalama anahtarı repoda **tutulmaz**; tanımlanmazsa uygulama
++başlamaz. En az 32 bayt uzunluğunda rastgele bir anahtar üretin:
++
++``` bash
++openssl rand -base64 64
++```
++
++Geliştirme ortamında `AileGaraj.Api` klasöründe user-secrets ile
++tanımlayın:
++
++``` bash
++dotnet user-secrets set "Jwt:Key" "<ürettiğiniz-anahtar>"
++```
++
++Üretim ortamında aynı değeri `Jwt__Key` ortam değişkeni ile verin.
++
+ ### 3. Veritabanını hazırlayın
+ 
+ Backend klasörüne geçin:
+diff --git a/ailegaraj-client/src/services/api.ts b/ailegaraj-client/src/services/api.ts
+index f6c7fc5..2772773 100644
+--- a/ailegaraj-client/src/services/api.ts
++++ b/ailegaraj-client/src/services/api.ts
+@@ -1,15 +1,81 @@
+-﻿
+-import axios from "axios";
++﻿import axios, {
++    type AxiosError,
++    type InternalAxiosRequestConfig,
++} from "axios";
+ 
+-console.log("API URL:", import.meta.env.VITE_API_URL);
++import type { AuthResponse } from "../types/auth";
++
++const API_URL = import.meta.env.VITE_API_URL;
++
++const defaultHeaders = {
++    "Content-Type": "application/json",
++};
+ 
+ const api = axios.create({
+-    baseURL: import.meta.env.VITE_API_URL,
+-    headers: {
+-        "Content-Type": "application/json",
+-    },
++    baseURL: API_URL,
++    headers: defaultHeaders,
++});
++
++// Refresh isteği kendi interceptor'ından geçmemeli; aksi halde refresh
++// başarısız olduğunda sonsuz döngü oluşabilir.
++const refreshClient = axios.create({
++    baseURL: API_URL,
++    headers: defaultHeaders,
+ });
+ 
++type RetriableRequestConfig = InternalAxiosRequestConfig & {
++    _retry?: boolean;
++};
++
++function clearSession() {
++    sessionStorage.removeItem("accessToken");
++    sessionStorage.removeItem("refreshToken");
++    sessionStorage.removeItem("user");
++}
++
++function redirectToLogin() {
++    clearSession();
++
++    if (window.location.pathname !== "/login") {
++        // Tam sayfa yönlendirme: AuthContext ve React Query önbelleği sıfırlanır.
++        window.location.replace("/login");
++    }
++}
++
++// Aynı anda birden fazla istek 401 alırsa refresh token yalnızca bir kez
++// kullanılmalıdır. Sunucu refresh token'ı her kullanımda döndürdüğü
++// (rotation) için ikinci bir paralel istek eski token ile reddedilirdi.
++let refreshPromise: Promise<string> | null = null;
++
++function refreshAccessToken(): Promise<string> {
++    if (refreshPromise) {
++        return refreshPromise;
++    }
++
++    const refreshToken = sessionStorage.getItem("refreshToken");
++
++    if (!refreshToken) {
++        return Promise.reject(new Error("Refresh token bulunamadı."));
++    }
++
++    refreshPromise = refreshClient
++        .post<AuthResponse>("/auth/refresh", { refreshToken })
++        .then((response) => {
++            const data = response.data;
++
++            sessionStorage.setItem("accessToken", data.accessToken);
++            sessionStorage.setItem("refreshToken", data.refreshToken);
++            sessionStorage.setItem("user", JSON.stringify(data.user));
++
++            return data.accessToken;
++        })
++        .finally(() => {
++            refreshPromise = null;
++        });
++
++    return refreshPromise;
++}
++
+ api.interceptors.request.use((config) => {
+     const token = sessionStorage.getItem("accessToken");
+ 
+@@ -20,4 +86,43 @@ api.interceptors.request.use((config) => {
+     return config;
+ });
+ 
++api.interceptors.response.use(
++    (response) => response,
++    async (error: AxiosError) => {
++        const originalRequest = error.config as
++            | RetriableRequestConfig
++            | undefined;
++
++        const isUnauthorized = error.response?.status === 401;
++        const isAuthEndpoint = (originalRequest?.url ?? "").startsWith("/auth/");
++
++        // Giriş, kayıt, çıkış ve refresh çağrılarındaki 401'ler normal
++        // akışın parçasıdır (ör. hatalı şifre); yenileme denenmez.
++        if (
++            !isUnauthorized ||
++            !originalRequest ||
++            originalRequest._retry ||
++            isAuthEndpoint
++        ) {
++            return Promise.reject(error);
++        }
++
++        originalRequest._retry = true;
++
++        try {
++            const newAccessToken = await refreshAccessToken();
++
++            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
++
++            return api(originalRequest);
++        } catch {
++            // Refresh token geçersiz, süresi dolmuş veya oturum başka bir
++            // yerden kapatılmış: kullanıcıyı giriş ekranına gönder.
++            redirectToLogin();
++
++            return Promise.reject(error);
++        }
++    }
++);
++
+ export default api;
+-- 
+2.43.0
+

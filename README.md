@@ -1,234 +1,268 @@
-# 🚗 AileGaraj
+# AileGaraj
 
-### Aileler İçin Akıllı Araç Rezervasyon ve Gider Yönetim Sistemi
+AileGaraj; ailelerin ortak kullandıkları araçları, rezervasyonları ve araç
+giderlerini yönetebildiği bir web uygulamasıdır. Süper Admin paneli ile
+platform genelindeki kullanıcılar, aileler, araçlar, rezervasyonlar ve
+finansal veriler merkezi olarak görüntülenebilir ve yönetilebilir.
 
-AileGaraj, ailelerin ortak kullandıkları araçları kolayca
-yönetebilmeleri için geliştirilmiş bir web uygulamasıdır.
+## Özellikler
 
-Araç rezervasyonlarının planlanması, aile üyelerinin kullanım takibi,
-araç giderlerinin yönetilmesi ve detaylı raporların oluşturulması gibi
-işlemleri tek bir platformda bir araya getirir.
+### Aile kullanımı
 
-Projenin temel amacı, aile içerisindeki araç kullanımını daha düzenli,
-şeffaf ve yönetilebilir hâle getirmektir.
+- E-posta doğrulamalı kayıt, giriş, oturum yenileme ve güvenli çıkış
+- Aile oluşturma, davet koduyla katılma ve aile üyelerini yönetme
+- Aile rolleri ve üye bazında işlem izinleri
+- Araç ekleme, düzenleme, pasifleştirme ve görsel yönetimi
+- Araç rezervasyonu; çakışan zaman aralıklarının engellenmesi
+- Rezervasyonları düzenleme, iptal etme ve süresi dolanları otomatik tamamlama
+- Araç giderleri ve aileye özel gider kategorileri
+- Aile, araç, üye, kategori ve tarih aralığına göre raporlama
 
-------------------------------------------------------------------------
+### Süper Admin paneli
 
-## ✨ Özellikler
+- Genel platform istatistikleri ve son kullanıcı/aile kayıtları
+- Kullanıcı arama, filtreleme, sayfalama ve detay görüntüleme
+- Kullanıcı hesaplarını geçici olarak devre dışı bırakma/aktifleştirme
+- Kullanıcı oturumlarını sonlandırma ve Super Admin rolünü yönetme
+- Aileleri ve aile üyeliklerini platform genelinde inceleme
+- Araçlarda marka/model/plaka/aile araması, aktiflik filtresi ve araç geçmişi
+- Rezervasyonları aile/kullanıcı/araç araması ve durum filtresiyle izleme
+- Rezervasyon çakışmalarını görüntüleme
+- Giderlerde arama ve aktiflik filtresi; kategori, aile ve araç bazında analiz
+- Aylık giderler ile en yüksek harcama yapan aile ve araçları inceleme
+- Yönetim işlemlerinin denetim kayıtlarını görüntüleme
 
-### 👨‍👩‍👧‍👦 Aile ve Üye Yönetimi
+Süper Admin rezervasyonları ve giderleri merkezi ekrandan görüntüler; bu
+panelden rezervasyon/gider düzenleme veya silme işlemi yapılmaz.
+Araç pasifleştirme, aracı silmekten farklıdır ve aile kayıtlarının bütünlüğünü
+korur.
 
--   Aile oluşturma ve aileye katılma
--   Aile üyelerini yönetme
--   Rol bazlı yetkilendirme
--   Üyelere özel işlem izinleri tanımlama
--   Yönetici ve standart üye rolleri
+## Teknolojiler
 
-### 🚘 Araç Yönetimi
+| Alan | Teknoloji |
+| --- | --- |
+| Backend | C#, ASP.NET Core Web API, .NET 10 |
+| Veri erişimi | Entity Framework Core |
+| Veritabanı | Microsoft SQL Server |
+| Kimlik doğrulama | ASP.NET Core Identity, JWT |
+| Frontend | React, TypeScript, Vite |
+| Stil | Tailwind CSS v4 |
+| Veri ve yönlendirme | TanStack React Query, Axios, React Router |
+| Grafikler | Recharts |
+| Araç görselleri | Cloudinary |
+| E-posta | SMTP / MailKit |
 
--   Yeni araç ekleme
--   Araç bilgilerini görüntüleme ve düzenleme
--   Araçları aktif veya pasif duruma getirme
--   Aileye ait araçları merkezi olarak yönetme
+## Proje yapısı
 
-### 📅 Rezervasyon Yönetimi
-
--   Araçlar için rezervasyon oluşturma
--   Başlangıç ve bitiş tarihlerini belirleme
--   Aynı araç için çakışan rezervasyonları engelleme
--   Rezervasyonları düzenleme ve iptal etme
--   Rezervasyon durumlarını takip etme
--   Süresi dolan rezervasyonları otomatik tamamlama
-
-### 💰 Gider Yönetimi
-
--   Araç gideri oluşturma ve takip etme
--   Gider kategorileri oluşturma ve yönetme
--   Giderleri araç ve aile üyesine göre inceleme
--   Gider kayıtlarını düzenleme ve pasife alma
--   Kategori bazlı gider takibi
-
-### 📊 Raporlama ve İstatistikler
-
--   Tarih aralığına göre raporlama
--   Araç, aile üyesi ve kategori bazlı filtreleme
--   Toplam gider ve rezervasyon istatistikleri
--   Aylık gider analizleri
--   Kategori bazlı gider dağılımı
--   Araç bazlı gider karşılaştırmaları
--   Aile üyelerinin araç kullanım süreleri
--   Üye bazlı rezervasyon istatistikleri
--   Kullanım süresine göre sıralama (Ranking)
-
-### 🔐 Güvenlik ve Yetkilendirme
-
--   JWT tabanlı kimlik doğrulama
--   ASP.NET Core Identity
--   Rol ve izin bazlı erişim kontrolü
--   Aile bazlı veri izolasyonu
--   Merkezi aile üyeliği kontrolü
--   Kullanıcı yetkilerine göre işlem kısıtlamaları
-
-------------------------------------------------------------------------
-
-## 🛠️ Kullanılan Teknolojiler
-
-  Alan                               Teknoloji
-  ---------------------------------- -----------------------------
-  Backend                            C#
-  Framework                          ASP.NET Core Web API
-  Platform                           .NET 10
-  ORM                                Entity Framework Core
-  Veritabanı                         Microsoft SQL Server
-  Authentication                     ASP.NET Core Identity & JWT
-  Frontend                           React
-  Programlama Dili                   TypeScript
-  Build Tool                         Vite
-  CSS Framework                      Tailwind CSS v4
-  State Management / Data Fetching   TanStack React Query
-  HTTP Client                        Axios
-  Routing                            React Router
-  Grafikler                          Recharts
-
-------------------------------------------------------------------------
-
-## 🏗️ Proje Mimarisi
-
-AileGaraj, frontend ve backend katmanlarından oluşan bir web uygulaması
-olarak geliştirilmiştir.
-
-``` text
+```text
 AileGaraj/
-│
 ├── AileGaraj.Api/
+│   ├── Authentication/
 │   ├── Authorization/
 │   ├── Controllers/
 │   ├── Data/
 │   ├── DTOs/
 │   ├── Filters/
+│   ├── Migrations/
+│   ├── Middleware/
 │   ├── Models/
-│   ├── Services/
-│   └── Program.cs
-│
+│   └── Services/
 ├── ailegaraj-client/
 │   ├── public/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── hooks/
-│   │   └── ...
-│   └── package.json
-│
+│   └── src/
+│       ├── components/
+│       ├── context/
+│       ├── pages/
+│       ├── services/
+│       └── types/
 └── README.md
 ```
 
-------------------------------------------------------------------------
+## Gereksinimler
 
-## ⚙️ Kurulum
+- .NET 10 SDK
+- Microsoft SQL Server
+- Node.js 20.19+ veya 22.12+ ve npm
+- EF Core CLI (`dotnet-ef` 10.x)
 
-### Gereksinimler
+## Kurulum ve çalıştırma
 
--   .NET 10 SDK
--   Microsoft SQL Server
--   Node.js
--   npm
+### 1. Depoyu klonlayın
 
-### 1. Projeyi klonlayın
-
-``` bash
+```bash
 git clone https://github.com/BunyminKarayagiz/AileGaraj.git
 cd AileGaraj
 ```
 
-### 2. Backend yapılandırması
+### 2. Backend ayarlarını yapılandırın
 
-`Ailegaraj.Api` klasöründeki veritabanı bağlantı ayarlarını kendi SQL
-Server ortamınıza göre yapılandırın.
+Backend, yerel geliştirmede `AileGaraj.Api` içindeki ASP.NET User Secrets
+değerlerini kullanabilir. Bu proje için `UserSecretsId` önceden tanımlıdır.
 
-`appsettings.json` veya güvenli kullanıcı sırları üzerinden bağlantı
-bilgilerinizi tanımlayın.
+```bash
+cd AileGaraj.Api
 
-#### JWT anahtarı (zorunlu)
-
-JWT imzalama anahtarı repoda **tutulmaz**; tanımlanmazsa uygulama
-başlamaz. En az 32 bayt uzunluğunda rastgele bir anahtar üretin:
-
-``` bash
+# En az 32 baytlık yeni bir JWT imzalama anahtarı üretin.
 openssl rand -base64 64
+
+dotnet user-secrets set "Jwt:Key" "<üretilen-anahtar>"
+dotnet user-secrets set "Jwt:Issuer" "AileGaraj"
+dotnet user-secrets set "Jwt:Audience" "AileGarajClient"
 ```
 
-Geliştirme ortamında `AileGaraj.Api` klasöründe user-secrets ile
-tanımlayın:
+`appsettings.json` içindeki varsayılan veritabanı adresi yerel SQL Server
+Windows kimlik doğrulamasını kullanır. Farklı bir sunucu veya kimlik
+doğrulama yöntemi kullanıyorsanız bağlantı dizesini User Secrets ile
+değiştirin:
 
-``` bash
-dotnet user-secrets set "Jwt:Key" "<ürettiğiniz-anahtar>"
+```bash
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "<SQL-Server-bağlantı-dizesi>"
 ```
 
-Üretim ortamında aynı değeri `Jwt__Key` ortam değişkeni ile verin.
+E-posta doğrulaması için SMTP ayarları zorunludur; eksik ayarlarla API
+başlamaz. Değerleri kendi SMTP sağlayıcınıza göre girin:
+
+```bash
+dotnet user-secrets set "EmailSettings:Host" "<smtp-sunucusu>"
+dotnet user-secrets set "EmailSettings:Port" "587"
+dotnet user-secrets set "EmailSettings:UserName" "<smtp-kullanıcısı>"
+dotnet user-secrets set "EmailSettings:Password" "<smtp-parolası>"
+dotnet user-secrets set "EmailSettings:SenderEmail" "<gönderici-e-posta>"
+dotnet user-secrets set "EmailSettings:SenderName" "AileGaraj"
+```
+
+Doğrulama e-postalarındaki bağlantı için frontend adresini yapılandırın.
+Doğrulama token'ları varsayılan olarak 24 saat geçerlidir.
+Vite farklı bir portta açılırsa, örneğin `5174`, bu adresi de aynı porta
+güncelleyin:
+
+```bash
+dotnet user-secrets set "Frontend:BaseUrl" "http://localhost:5173"
+```
+
+Araç API uç noktalarının çalışması için Cloudinary ayarları gerekir:
+
+```bash
+dotnet user-secrets set "Cloudinary:CloudName" "<cloud-name>"
+dotnet user-secrets set "Cloudinary:ApiKey" "<api-key>"
+dotnet user-secrets set "Cloudinary:ApiSecret" "<api-secret>"
+```
+
+Üretimde User Secrets yerine güvenli ortam değişkenleri veya bir secret
+manager kullanın. Örnek ortam değişkeni karşılıkları: `Jwt__Key`,
+`ConnectionStrings__DefaultConnection`, `EmailSettings__Host` ve
+`Frontend__BaseUrl`. Gizli değerleri `appsettings.json` dosyasına veya Git'e
+eklemeyin.
 
 ### 3. Veritabanını hazırlayın
 
-Backend klasörüne geçin:
+`dotnet-ef` yüklü değilse:
 
-``` bash
-cd AileGaraj.Api
+```bash
+dotnet tool install --global dotnet-ef --version "10.*"
 ```
 
-EF Core migration'larını uygulayın:
+Migration'ları uygulayın:
 
-``` bash
+```bash
 dotnet ef database update
 ```
 
 ### 4. Backend'i çalıştırın
 
-``` bash
+`AileGaraj.Api` klasöründeyken:
+
+```bash
 dotnet run
 ```
 
+Varsayılan geliştirme adresi `http://localhost:5138`'dir. Swagger arayüzü:
+`http://localhost:5138/swagger`.
+
 ### 5. Frontend'i çalıştırın
 
-Yeni bir terminal açın:
+Yeni bir terminalde depo kök dizininden:
 
-``` bash
+```bash
 cd ailegaraj-client
-```
-
-Bağımlılıkları yükleyin:
-
-``` bash
 npm install
 ```
 
-Gerekli API adresini ortam değişkenlerinde yapılandırdıktan sonra:
+`ailegaraj-client/.env.local` dosyasını oluşturup API adresini tanımlayın:
 
-``` bash
+```dotenv
+VITE_API_URL=http://localhost:5138/api
+```
+
+Ardından geliştirme sunucusunu başlatın:
+
+```bash
 npm run dev
 ```
 
-Uygulama, Vite tarafından belirtilen yerel geliştirme adresinde
-çalışacaktır.
+Vite varsayılan olarak `http://localhost:5173` adresini kullanır. Bu port
+doluysa Vite başka bir port seçebilir; bu durumda `Frontend:BaseUrl`
+değerini güncelleyin ki e-postadaki doğrulama bağlantısı çalışan frontend
+adresini açsın. `.env.local` Git tarafından yok sayılır; buraya gizli bilgi
+eklemeyin.
 
-------------------------------------------------------------------------
+## İlk Super Admin kullanıcısını belirleme
 
-## 🎯 Projenin Amacı
+Super Admin rolü migration/model tarafından `Roles` tablosuna eklenir.
+İlk yönetici hesabı için önce uygulamada kayıt olun ve e-posta adresini
+doğrulayın. Ardından aşağıdaki SQL'i `AileGarajDB` üzerinde, `@Email`
+değerini kayıtlı e-posta adresinizle değiştirerek çalıştırın:
 
-AileGaraj, yalnızca araç rezervasyonu oluşturmayı değil, ortak araç
-kullanımının bütün süreçlerini tek noktadan yönetmeyi hedeflemektedir.
+```sql
+USE AileGarajDB;
+GO
 
-Rezervasyon çakışmalarının önlenmesi, giderlerin düzenli takip edilmesi
-ve kullanım istatistiklerinin raporlanması sayesinde ailelerin araç
-yönetimini kolaylaştırmayı amaçlar.
+DECLARE @Email NVARCHAR(256) = N'admin@example.com';
+DECLARE @UserId NVARCHAR(450);
+DECLARE @RoleId NVARCHAR(450) = N'ailegaraj-superadmin-role';
 
-------------------------------------------------------------------------
+SELECT @UserId = Id
+FROM dbo.Users
+WHERE NormalizedEmail = UPPER(@Email);
 
-## 🚀 Geliştirme Süreci
+IF @UserId IS NULL
+    THROW 50001, 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.', 1;
 
-AileGaraj aktif olarak geliştirilen bir projedir. Yeni özellikler ve
-iyileştirmeler geliştirme sürecinde projeye eklenmektedir.
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE Id = @RoleId)
+    THROW 50002, 'SuperAdmin rolü bulunamadı; önce migration''ları uygulayın.', 1;
 
-------------------------------------------------------------------------
+IF NOT EXISTS (
+    SELECT 1 FROM dbo.UserRoles
+    WHERE UserId = @UserId AND RoleId = @RoleId
+)
+    INSERT INTO dbo.UserRoles (UserId, RoleId)
+    VALUES (@UserId, @RoleId);
 
-**AileGaraj** -- Aile araç yönetiminde düzenli, kolay ve şeffaf bir
-deneyim. 🚗
+UPDATE dbo.ActiveSessions
+SET RevokedAt = SYSUTCDATETIME()
+WHERE UserId = @UserId AND RevokedAt IS NULL;
+
+UPDATE dbo.Users
+SET SecurityStamp = CONVERT(NVARCHAR(36), NEWID())
+WHERE Id = @UserId;
+GO
+```
+
+SQL işlemi kullanıcının aktif oturumlarını sonlandırır. Kullanıcı yeni
+oturum açtığında Super Admin yetkisi token'a eklenir. Sonraki rol
+değişiklikleri **Super Admin → Kullanıcılar** ekranından yapılabilir.
+
+## Kontroller
+
+```bash
+# Backend
+cd AileGaraj.Api
+dotnet build
+
+# Frontend
+cd ../ailegaraj-client
+npm run build
+npm run lint
+```
+
+**AileGaraj** — aile araç yönetiminde düzenli, kolay ve şeffaf bir deneyim.

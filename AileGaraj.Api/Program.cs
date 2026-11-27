@@ -12,6 +12,13 @@ using AileGaraj.Api.Middleware;
 using AileGaraj.Api.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using AileGaraj.Api.Filters;
+using AileGaraj.Api.Services.Verification;
+using AileGaraj.Api.Services.Verification.Interfaces;
+using AileGaraj.Api.Services.Verification.Options;
+using AileGaraj.Api.Services.Verification.Senders;
+using AileGaraj.Api.Services.Verification.Handlers;
+using AileGaraj.Api.Services.Verification.Requests;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -110,12 +117,27 @@ builder.Services
 // Controller ve Swagger
 builder.Services.AddControllers();
 
+var frontendBaseUrl = builder.Configuration["Frontend:BaseUrl"]
+    ?? "http://localhost:5173";
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
+        if (builder.Environment.IsDevelopment())
+        {
+            policy.SetIsOriginAllowed(origin =>
+                Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                uri.IsLoopback &&
+                (uri.Scheme == Uri.UriSchemeHttp ||
+                 uri.Scheme == Uri.UriSchemeHttps));
+        }
+        else
+        {
+            policy.WithOrigins(frontendBaseUrl);
+        }
+
         policy
-            .WithOrigins("http://localhost:5173")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -144,10 +166,31 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
+builder.Services
+    .AddOptions<EmailSettings>()
+    .Bind(builder.Configuration.GetSection("EmailSettings"))
+    .Validate(x => !string.IsNullOrWhiteSpace(x.Host), "SMTP Host zorunludur.")
+    .Validate(x => !string.IsNullOrWhiteSpace(x.UserName), "SMTP kullanıcı adı zorunludur.")
+    .Validate(x => !string.IsNullOrWhiteSpace(x.Password), "SMTP şifresi zorunludur.")
+    .Validate(x => !string.IsNullOrWhiteSpace(x.SenderEmail), "Gönderici e-posta adresi zorunludur.")
+    .ValidateOnStart();
+
+builder.Services.AddTransient<IEmailSender, SmtpEmailSender>();
+
+builder.Services.AddScoped<
+    IUserVerificationService,
+    UserVerificationService
+>();
+
+builder.Services.AddScoped<
+    IVerificationHandler<EmailVerificationRequest>,
+    EmailVerificationHandler
+>();
+
 builder.Services.AddScoped<IFamilyAuthorizationService, FamilyAuthorizationService>();
 
 builder.Services.AddScoped<IAuthorizationHandler, FamilyPermissionHandler>();
-
+builder.Services.AddScoped<CloudinaryService>();
 builder.Services.AddSingleton<IAuthorizationPolicyProvider, FamilyPermissionPolicyProvider>();
 builder.Services.AddScoped<RequireFamilyMembershipFilter>();
 

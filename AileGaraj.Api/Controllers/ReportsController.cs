@@ -152,7 +152,6 @@ public class ReportsController : FamilyBaseController
         var reservationsQuery = _context.Reservations
             .Where(x =>
                 x.Vehicle.FamilyId == CurrentMembership.FamilyId &&
-                x.Status != ReservationStatus.Cancelled &&
                 vehicleIds.Contains(x.VehicleId));
 
         // Rezervasyon görüntüleme yetkisine göre kayıtları filtrele
@@ -226,7 +225,8 @@ public class ReportsController : FamilyBaseController
             TotalExpenseAmount = expenses.Sum(x => x.Amount),
             TotalExpenseCount = expenses.Count,
 
-            TotalReservationCount = reservations.Count,
+            TotalReservationCount = reservations.Count(x =>
+                 x.Status != ReservationStatus.Cancelled),
 
             ActiveVehicleCount = vehicles.Count(x => x.IsActive),
 
@@ -327,18 +327,21 @@ public class ReportsController : FamilyBaseController
             {
                 FamilyMemberId = group.Key.FamilyMemberId,
                 MemberName = group.Key.MemberName,
-                ReservationCount = group.Count(),
+
+                ReservationCount = group.Count(x =>
+                    x.Status != ReservationStatus.Cancelled),
 
                 CompletedReservationCount = group.Count(x =>
                     x.Status == ReservationStatus.Completed),
 
+                CancelledReservationCount = group.Count(x =>
+                    x.Status == ReservationStatus.Cancelled),
+
                 UsageHours = Math.Round(
                     (decimal)group
                         .Where(x => x.Status == ReservationStatus.Completed)
-                        .Sum(x => CalculateUsageHours(x.StartDate, x.EndDate)),
-                    2
-                )
-            })
+                        .Sum(x => CalculateUsageHours(x.StartDate, x.EndDate)),2)
+                        })
             .OrderByDescending(x => x.UsageHours)
             .ToList();
 
@@ -355,7 +358,8 @@ public class ReportsController : FamilyBaseController
                 VehicleId = group.Key.VehicleId,
                 VehicleName = group.Key.VehicleName,
                 PlateNumber = group.Key.PlateNumber,
-                ReservationCount = group.Count(),
+                ReservationCount = group.Count(x =>
+                    x.Status != ReservationStatus.Cancelled),
 
                 UsageHours = Math.Round(
                     (decimal)group

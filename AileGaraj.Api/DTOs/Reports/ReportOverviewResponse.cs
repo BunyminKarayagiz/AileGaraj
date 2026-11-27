@@ -59,6 +59,7 @@ public class MemberReservationReportDto
     public int ReservationCount { get; set; }
     public int CompletedReservationCount { get; set; }
     public decimal UsageHours { get; set; }
+    public int CancelledReservationCount { get; set; }
 }
 
 public class VehicleReservationReportDto

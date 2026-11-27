@@ -4,6 +4,7 @@
     lastName: string;
     email: string;
     phoneNumber: string;
+    roles: string[];
 }
 
 export interface AuthResponse {

@@ -9,6 +9,7 @@ using AileGaraj.Api.Data;
 using AileGaraj.Api.Models;
 using AileGaraj.Api.Authorization;
 using AileGaraj.Api.Filters;
+using AileGaraj.Api.Services;
 
 namespace AileGaraj.Api.Controllers;
 
@@ -20,13 +21,16 @@ public class VehiclesController : FamilyBaseController
 {
     private readonly ApplicationDbContext _context;
     private readonly IFamilyAuthorizationService _familyAuthorizationService;
+    private readonly CloudinaryService _cloudinaryService;
 
     public VehiclesController(
-        ApplicationDbContext context,
-        IFamilyAuthorizationService familyAuthorizationService)
+         ApplicationDbContext context,
+         IFamilyAuthorizationService familyAuthorizationService,
+         CloudinaryService cloudinaryService)
     {
-        _context = context;
-        _familyAuthorizationService = familyAuthorizationService;
+            _context = context;
+            _familyAuthorizationService = familyAuthorizationService;
+            _cloudinaryService = cloudinaryService;
     }
 
 
@@ -50,7 +54,8 @@ public class VehiclesController : FamilyBaseController
                 CurrentMileage = x.CurrentMileage,
                 FuelType = x.FuelType,
                 Description = x.Description,
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                ImageUrl = x.ImageUrl
             })
             .ToListAsync();
 
@@ -58,10 +63,11 @@ public class VehiclesController : FamilyBaseController
     }
 
     // POST: api/vehicles
+
     [HttpPost]
     [FamilyPermission(PermissionCodes.VehicleEdit)]
     public async Task<IActionResult> CreateVehicle(
-    CreateVehicleRequest request)
+        [FromForm] CreateVehicleRequest request)
     {
         var plateNumber = NormalizePlate(request.PlateNumber);
 
@@ -71,6 +77,74 @@ public class VehiclesController : FamilyBaseController
 
         if (plateExists)
             return BadRequest(new { message = "Bu plaka ailede zaten kayıtlı." });
+
+        // Görsel doğrulaması
+        if (request.Image != null)
+        {
+            var allowedTypes = new[]
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        };
+
+            if (!allowedTypes.Contains(request.Image.ContentType))
+            {
+                return BadRequest(new
+                {
+                    message = "Sadece JPG, PNG ve WEBP formatları yüklenebilir."
+                });
+            }
+
+            const long maxFileSize = 10 * 1024 * 1024;
+
+            if (request.Image.Length > maxFileSize)
+            {
+                return BadRequest(new
+                {
+                    message = "Görsel boyutu en fazla 10 MB olabilir."
+                });
+            }
+
+            if (request.Image.Length == 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Boş bir görsel yüklenemez."
+                });
+            }
+        }
+
+        var family = await _context.Families
+            .FirstOrDefaultAsync(x =>
+                x.Id == CurrentMembership.FamilyId);
+
+        if (family == null)
+            return NotFound(new { message = "Aile bulunamadı." });
+
+        string? imageUrl = null;
+        string? imagePublicId = null;
+
+        // Görsel varsa Cloudinary'ye yükle
+        if (request.Image != null)
+        {
+            var uploadResult = await _cloudinaryService.UploadVehicleImageAsync(
+                request.Image,
+                family.Id,
+                family.Name,
+                plateNumber);
+
+            if (uploadResult.Error != null)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Araç görseli yüklenirken hata oluştu."
+                });
+            }
+
+            imageUrl = uploadResult.SecureUrl?.ToString();
+            imagePublicId = uploadResult.PublicId;
+        }
 
         var vehicle = new Vehicle
         {
@@ -82,12 +156,27 @@ public class VehiclesController : FamilyBaseController
             CurrentMileage = request.CurrentMileage,
             FuelType = request.FuelType.Trim(),
             Description = request.Description?.Trim(),
+            ImageUrl = imageUrl,
+            ImagePublicId = imagePublicId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.Vehicles.Add(vehicle);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.Vehicles.Add(vehicle);
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Veritabanına kayıt başarısız olursa yüklenen görseli sil
+            if (!string.IsNullOrWhiteSpace(imagePublicId))
+            {
+                await _cloudinaryService.DeleteImageAsync(imagePublicId);
+            }
+
+            throw;
+        }
 
         return Ok(new VehicleResponse
         {
@@ -99,16 +188,19 @@ public class VehiclesController : FamilyBaseController
             CurrentMileage = vehicle.CurrentMileage,
             FuelType = vehicle.FuelType,
             Description = vehicle.Description,
+            ImageUrl = vehicle.ImageUrl,
             CreatedAt = vehicle.CreatedAt
         });
     }
 
+
     // PUT: api/vehicles/{id}
+
     [HttpPut("{id:int}")]
     [FamilyPermission(PermissionCodes.VehicleEdit)]
     public async Task<IActionResult> UpdateVehicle(
         int id,
-        UpdateVehicleRequest request)
+        [FromForm] UpdateVehicleRequest request)
     {
         var vehicle = await _context.Vehicles.FirstOrDefaultAsync(x =>
             x.Id == id &&
@@ -128,6 +220,77 @@ public class VehiclesController : FamilyBaseController
         if (plateExists)
             return BadRequest(new { message = "Bu plaka ailede zaten kayıtlı." });
 
+        // Yeni görsel varsa doğrula.
+        if (request.Image != null)
+        {
+            var allowedTypes = new[]
+            {
+            "image/jpeg",
+            "image/png",
+            "image/webp"
+        };
+
+            if (!allowedTypes.Contains(request.Image.ContentType))
+            {
+                return BadRequest(new
+                {
+                    message = "Sadece JPG, PNG ve WEBP formatları yüklenebilir."
+                });
+            }
+
+            const long maxFileSize = 10 * 1024 * 1024;
+
+            if (request.Image.Length == 0)
+            {
+                return BadRequest(new
+                {
+                    message = "Boş bir görsel yüklenemez."
+                });
+            }
+
+            if (request.Image.Length > maxFileSize)
+            {
+                return BadRequest(new
+                {
+                    message = "Görsel boyutu en fazla 10 MB olabilir."
+                });
+            }
+        }
+
+        string? newImagePublicId = null;
+        var oldImagePublicId = vehicle.ImagePublicId;
+
+        // Kullanıcı yeni görsel seçtiyse Cloudinary'ye yükle.
+        if (request.Image != null)
+        {
+            var family = await _context.Families
+                .FirstOrDefaultAsync(x =>
+                    x.Id == CurrentMembership.FamilyId);
+
+            if (family == null)
+                return NotFound(new { message = "Aile bulunamadı." });
+
+            newImagePublicId = $"vehicle-image-{Guid.NewGuid():N}";
+
+            var uploadResult = await _cloudinaryService.UploadVehicleImageAsync(
+                request.Image,
+                family.Id,
+                family.Name,
+                plateNumber,
+                newImagePublicId);
+
+            if (uploadResult.Error != null)
+            {
+                return StatusCode(500, new
+                {
+                    message = "Araç görseli yüklenirken hata oluştu."
+                });
+            }
+
+            vehicle.ImageUrl = uploadResult.SecureUrl?.ToString();
+            vehicle.ImagePublicId = uploadResult.PublicId;
+        }
+
         vehicle.Brand = request.Brand.Trim();
         vehicle.Model = request.Model.Trim();
         vehicle.PlateNumber = plateNumber;
@@ -135,13 +298,38 @@ public class VehiclesController : FamilyBaseController
         vehicle.FuelType = request.FuelType.Trim();
         vehicle.Description = request.Description?.Trim();
 
-        // Kilometreyi bu ekrandan değiştirmiyoruz.
-        // Kilometre geçmişi ayrı bir işlemle yönetilecek.
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch
+        {
+            // Veritabanı kaydı başarısızsa yeni yüklenen görseli temizle.
+            if (!string.IsNullOrWhiteSpace(newImagePublicId))
+            {
+                await _cloudinaryService.DeleteImageAsync(newImagePublicId);
+            }
 
-        await _context.SaveChangesAsync();
+            throw;
+        }
+
+        // Veritabanı güncellendikten sonra eski görseli sil.
+        if (!string.IsNullOrWhiteSpace(newImagePublicId) &&
+            !string.IsNullOrWhiteSpace(oldImagePublicId))
+        {
+            try
+            {
+                await _cloudinaryService.DeleteImageAsync(oldImagePublicId);
+            }
+            catch
+            {
+                // Eski görsel silinemezse araç güncellemesi yine başarılı kalır.
+            }
+        }
 
         return Ok(new { message = "Araç bilgileri güncellendi." });
     }
+
 
     // DELETE: api/vehicles/{id}
     [HttpDelete("{id:int}")]
@@ -198,6 +386,8 @@ public class CreateVehicleRequest
 
     [MaxLength(500)]
     public string? Description { get; set; }
+
+    public IFormFile? Image { get; set; }
 }
 
 public class UpdateVehicleRequest
@@ -223,6 +413,8 @@ public class UpdateVehicleRequest
 
     [MaxLength(500)]
     public string? Description { get; set; }
+
+    public IFormFile? Image { get; set; }
 }
 
 // API cevap DTO'su
@@ -238,4 +430,5 @@ public class VehicleResponse
     public string FuelType { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? ImageUrl { get; set; }
 }

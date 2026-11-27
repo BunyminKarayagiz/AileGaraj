@@ -1,16 +1,20 @@
 ﻿
 import { useState, type FormEvent } from "react";
 import {
-    LogOut,
     Users,
     Plus,
     KeyRound,
     Loader2,
-    Car,
+    CarFront,
     CalendarDays,
     Receipt,
+    ChartNoAxesCombined,
+    ArrowUpRight,
+    ShieldCheck,
+    Sparkles,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
@@ -29,8 +33,35 @@ interface FamilyResponse {
     memberCount: number;
 }
 
+const quickActions = [
+    {
+        title: "Araçlar",
+        description: "Aile araçlarını yönet",
+        path: "/vehicles",
+        icon: CarFront,
+    },
+    {
+        title: "Rezervasyonlar",
+        description: "Kullanım planını görüntüle",
+        path: "/reservations",
+        icon: CalendarDays,
+    },
+    {
+        title: "Giderler",
+        description: "Araç giderlerini takip et",
+        path: "/expenses",
+        icon: Receipt,
+    },
+    {
+        title: "Raporlar",
+        description: "Kullanım analizlerini incele",
+        path: "/reports",
+        icon: ChartNoAxesCombined,
+    },
+];
+
 export default function Dashboard() {
-    const { user, logout } = useAuth();
+    const { user } = useAuth();
     const navigate = useNavigate();
     const queryClient = useQueryClient();
 
@@ -39,7 +70,6 @@ export default function Dashboard() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
-    // Kullanıcının aile bilgilerini getir
     const {
         data: family,
         isLoading,
@@ -56,7 +86,6 @@ export default function Dashboard() {
         },
     });
 
-    // Aile oluşturma
     const createFamilyMutation = useMutation({
         mutationFn: async (name: string) => {
             const response = await api.post<FamilyResponse>(
@@ -72,7 +101,6 @@ export default function Dashboard() {
         },
         onSuccess: (data) => {
             queryClient.setQueryData(["my-family"], data);
-
             setFamilyName("");
             setSuccess("Ailen başarıyla oluşturuldu.");
         },
@@ -81,7 +109,6 @@ export default function Dashboard() {
         },
     });
 
-    // Davet koduyla aileye katılma
     const joinFamilyMutation = useMutation({
         mutationFn: async (code: string) => {
             const response = await api.post<FamilyResponse>(
@@ -97,7 +124,6 @@ export default function Dashboard() {
         },
         onSuccess: (data) => {
             queryClient.setQueryData(["my-family"], data);
-
             setInviteCode("");
             setSuccess("Aileye başarıyla katıldın.");
         },
@@ -106,47 +132,33 @@ export default function Dashboard() {
         },
     });
 
-    // Aile oluşturma formu
     const handleCreateFamily = (e: FormEvent) => {
         e.preventDefault();
-
         createFamilyMutation.mutate(familyName.trim());
     };
 
-    // Aileye katılma formu
     const handleJoinFamily = (e: FormEvent) => {
         e.preventDefault();
-
-        joinFamilyMutation.mutate(
-            inviteCode.trim().toUpperCase()
-        );
+        joinFamilyMutation.mutate(inviteCode.trim().toUpperCase());
     };
 
-    // Çıkış
-    const handleLogout = async () => {
-        await logout();
-    };
-
-    // Yükleniyor
     if (isLoading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#f8f7fa]">
-                <Loader2 className="w-8 h-8 animate-spin text-[#5A189A]" />
+            <div className="flex min-h-[60vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-[#5A189A]" />
             </div>
         );
     }
 
-    // Aile bilgileri alınırken beklenmeyen hata
     if (isError) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-[#f8f7fa] p-6">
-                <p className="text-gray-600 mb-4">
+            <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+                <p className="text-gray-600">
                     Aile bilgileri alınırken bir hata oluştu.
                 </p>
-
                 <button
                     onClick={() => refetch()}
-                    className="text-[#5A189A] font-semibold"
+                    className="rounded-xl bg-[#5A189A] px-5 py-2.5 font-semibold text-white"
                 >
                     Tekrar Dene
                 </button>
@@ -155,268 +167,289 @@ export default function Dashboard() {
     }
 
     return (
-        <div className="min-h-screen bg-[#f8f7fa]">
-            <header className="bg-white border-b border-gray-200">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-[#240046]">
-                            AileGaraj
-                        </h1>
-                        <p className="text-sm text-gray-500">
-                            Aile araç yönetim platformu
-                        </p>
+        <div className="mx-auto max-w-7xl space-y-8 pb-10">
+
+            {/* Welcome */}
+            <motion.section
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="relative overflow-hidden rounded-3xl bg-[#240046] p-7 text-white shadow-xl shadow-purple-950/10 md:p-10"
+            >
+                <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-[#5A189A]/60 blur-3xl" />
+                <div className="absolute -bottom-32 right-1/3 h-64 w-64 rounded-full bg-[#974CE0]/30 blur-3xl" />
+
+                <div className="relative z-10 max-w-2xl">
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-purple-100">
+                        <Sparkles size={14} />
+                        AileGaraj'a hoş geldin
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <div className="text-right hidden sm:block">
-                            <p className="font-semibold text-gray-800">
-                                {user?.firstName} {user?.lastName}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {user?.email}
-                            </p>
-                        </div>
-
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-100 transition"
-                        >
-                            <LogOut size={18} />
-                            Çıkış
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-6 py-10">
-                <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-[#240046]">
+                    <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
                         Merhaba, {user?.firstName}!
-                    </h2>
-                    <p className="text-gray-500 mt-1">
-                        AileGaraj hesabına hoş geldin.
+                    </h1>
+
+                    <p className="mt-3 max-w-lg text-sm leading-6 text-purple-100/80 md:text-base">
+                        Ailenin araçlarını, rezervasyonlarını ve giderlerini
+                        tek bir yerden kolayca yönet.
                     </p>
-                </div>
 
-                {error && (
-                    <div className="mb-6 p-4 rounded-lg bg-red-50 text-red-700 border border-red-200">
-                        {error}
-                    </div>
-                )}
-
-                {success && (
-                    <div className="mb-6 p-4 rounded-lg bg-green-50 text-green-700 border border-green-200">
-                        {success}
-                    </div>
-                )}
-
-                {family ? (
-                    <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                                <Users className="text-[#5A189A]" size={25} />
-                            </div>
-
-                            <div>
-                                <p className="text-sm text-gray-500">
-                                    Ailen
-                                </p>
-                                <h3 className="text-xl font-bold text-[#240046]">
-                                    {family.name}
-                                </h3>
-                            </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-3 gap-4">
-                            <div className="p-4 rounded-xl bg-gray-50">
-                                <p className="text-sm text-gray-500">
-                                    Rolün
-                                </p>
-                                <p className="font-semibold text-[#240046] mt-1">
-                                    {family.role === "FamilyAdmin"
-                                        ? "Aile Yöneticisi"
-                                        : "Aile Üyesi"}
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-gray-50">
-                                <p className="text-sm text-gray-500">
-                                    Üye Sayısı
-                                </p>
-                                <p className="font-semibold text-[#240046] mt-1">
-                                    {family.memberCount}
-                                </p>
-                            </div>
-
-                            <div className="p-4 rounded-xl bg-gray-50">
-                                <p className="text-sm text-gray-500">
-                                    Aile No
-                                </p>
-                                <p className="font-semibold text-[#240046] mt-1">
-                                    #{family.id}
-                                </p>
-                            </div>
-                        </div>
-
+                    {family && (
                         <button
                             onClick={() => navigate("/family")}
-                            className="mt-6 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
+                            className="mt-7 inline-flex items-center gap-2 rounded-xl bg-[#E1FF00] px-5 py-3 text-sm font-bold text-[#240046] transition hover:-translate-y-0.5 hover:bg-[#d4f000]"
                         >
                             Aile Yönetimine Git
+                            <ArrowUpRight size={17} />
                         </button>
+                    )}
+                </div>
 
-                        <div className="mt-8 border-t pt-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <h4 className="font-semibold text-[#240046] mb-1">
-                                        Araç Yönetimi
-                                    </h4>
-                                    <p className="text-sm text-gray-500">
-                                        Ailene ait araçları görüntüle ve yönet.
-                                    </p>
+                <div className="absolute bottom-0 right-8 hidden opacity-20 md:block">
+                    <CarFront size={190} strokeWidth={0.8} />
+                </div>
+            </motion.section>
+
+            {/* Notifications */}
+            {error && (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            {success && (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                    {success}
+                </div>
+            )}
+
+            {family ? (
+                <>
+                    {/* Family Overview */}
+                    <motion.section
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="grid gap-5 md:grid-cols-3"
+                    >
+                        <div className="rounded-2xl border border-gray-100 bg-white p-6 shadow-sm md:col-span-2">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-[#5A189A]">
+                                        <Users size={27} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">
+                                            Aile Bilgileri
+                                        </p>
+                                        <h2 className="mt-1 text-xl font-bold text-[#240046]">
+                                            {family.name}
+                                        </h2>
+                                    </div>
                                 </div>
 
                                 <button
-                                    onClick={() => navigate("/vehicles")}
-                                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
+                                    onClick={() => navigate("/family")}
+                                    className="rounded-xl p-2 text-gray-400 transition hover:bg-purple-50 hover:text-[#5A189A]"
                                 >
-                                    <Car size={18} />
-                                    Araçları Görüntüle
+                                    <ArrowUpRight size={21} />
                                 </button>
                             </div>
-                        </div>
-                        <div className="mt-6 border-t pt-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <h4 className="font-semibold text-[#240046] mb-1">
-                                        Rezervasyon Yönetimi
-                                    </h4>
-                                    <p className="text-sm text-gray-500">
-                                        Aile araçlarının rezervasyonlarını görüntüle ve takip et.
+
+                            <div className="mt-7 grid grid-cols-2 gap-4">
+                                <div className="rounded-xl bg-[#F8F5FC] p-4">
+                                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
+                                        <ShieldCheck size={16} />
+                                        Rolün
+                                    </div>
+                                    <p className="font-semibold text-[#240046]">
+                                        {family.role === "FamilyAdmin"
+                                            ? "Aile Yöneticisi"
+                                            : "Aile Üyesi"}
                                     </p>
                                 </div>
 
-                                <button
-                                    onClick={() => navigate("/reservations")}
-                                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
-                                >
-                                    <CalendarDays size={18} />
-                                    Rezervasyonları Görüntüle
-                                </button>
-                            </div>
-                        </div>
-                        <div className="mt-6 border-t pt-6">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                <div>
-                                    <h4 className="font-semibold text-[#240046] mb-1">
-                                        Gider Yönetimi
-                                    </h4>
-                                    <p className="text-sm text-gray-500">
-                                        Aile araçlarına ait giderleri görüntüle ve takip et.
+                                <div className="rounded-xl bg-[#F8F5FC] p-4">
+                                    <div className="mb-2 flex items-center gap-2 text-sm text-gray-500">
+                                        <Users size={16} />
+                                        Üye Sayısı
+                                    </div>
+                                    <p className="font-semibold text-[#240046]">
+                                        {family.memberCount} kişi
                                     </p>
                                 </div>
-
-                                <button
-                                    onClick={() => navigate("/expenses")}
-                                    className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg bg-[#5A189A] text-white font-semibold hover:bg-[#240046] transition"
-                                >
-                                    <Receipt size={18} />
-                                    Giderleri Görüntüle
-                                </button>
                             </div>
                         </div>
 
-                    </div>
-
-                ) : (
-                    <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-5">
-                                <Plus className="text-[#5A189A]" size={26} />
+                        <div className="flex flex-col justify-between rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+                            <div>
+                                <p className="text-sm text-gray-500">
+                                    Aile Numarası
+                                </p>
+                                <h3 className="mt-2 text-3xl font-bold text-[#240046]">
+                                    #{family.id}
+                                </h3>
                             </div>
 
-                            <h3 className="text-xl font-bold text-[#240046]">
+                            <div className="mt-6 border-t border-gray-100 pt-4">
+                                <p className="text-xs text-gray-400">
+                                    AileGaraj üyeliğin
+                                </p>
+                                <p className="mt-1 text-sm font-semibold text-[#5A189A]">
+                                    {family.role === "FamilyAdmin"
+                                        ? "Yönetici hesabı"
+                                        : "Standart üyelik"}
+                                </p>
+                            </div>
+                        </div>
+                    </motion.section>
+
+                    {/* Quick Actions */}
+                    <section>
+                        <div className="mb-5 flex items-end justify-between">
+                            <div>
+                                <h2 className="text-xl font-bold text-[#240046]">
+                                    Hızlı İşlemler
+                                </h2>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    İhtiyacın olan bölüme hızlıca ulaş.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                            {quickActions.map((action, index) => {
+                                const Icon = action.icon;
+
+                                return (
+                                    <motion.button
+                                        key={action.path}
+                                        initial={{ opacity: 0, y: 15 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.15 + index * 0.06 }}
+                                        onClick={() => navigate(action.path)}
+                                        className="group flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition duration-200 hover:-translate-y-1 hover:border-purple-200 hover:shadow-lg hover:shadow-purple-950/5"
+                                    >
+                                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-[#5A189A] transition group-hover:bg-[#5A189A] group-hover:text-white">
+                                            <Icon size={23} />
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="font-bold text-[#240046]">
+                                                {action.title}
+                                            </h3>
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                {action.description}
+                                            </p>
+                                        </div>
+
+                                        <ArrowUpRight
+                                            size={18}
+                                            className="shrink-0 text-gray-300 transition group-hover:text-[#5A189A]"
+                                        />
+                                    </motion.button>
+                                );
+                            })}
+                        </div>
+                    </section>
+                </>
+            ) : (
+                /* No Family */
+                <section className="grid gap-6 lg:grid-cols-2">
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl border border-gray-100 bg-white p-7 shadow-sm md:p-8"
+                    >
+                        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-[#5A189A]">
+                            <Plus size={27} />
+                        </div>
+
+                        <h2 className="text-xl font-bold text-[#240046]">
+                            Aile Oluştur
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-gray-500">
+                            Kendi aileni oluştur ve aile üyelerini davet ederek
+                            araçlarınızı birlikte yönetin.
+                        </p>
+
+                        <form onSubmit={handleCreateFamily} className="mt-7">
+                            <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                Aile Adı
+                            </label>
+
+                            <input
+                                type="text"
+                                value={familyName}
+                                onChange={(e) => setFamilyName(e.target.value)}
+                                placeholder="Örn. Karayağız Ailesi"
+                                minLength={2}
+                                maxLength={100}
+                                required
+                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                            />
+
+                            <button
+                                type="submit"
+                                disabled={createFamilyMutation.isPending}
+                                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#5A189A] py-3 font-semibold text-white transition hover:bg-[#240046] disabled:opacity-50"
+                            >
+                                {createFamilyMutation.isPending && (
+                                    <Loader2 size={18} className="animate-spin" />
+                                )}
                                 Aile Oluştur
-                            </h3>
+                            </button>
+                        </form>
+                    </motion.div>
 
-                            <p className="text-sm text-gray-500 mt-2 mb-6">
-                                Kendi aileni oluştur ve aile üyelerini davet ederek araçlarını
-                                birlikte yönet.
-                            </p>
-
-                            <form onSubmit={handleCreateFamily}>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Aile Adı
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={familyName}
-                                    onChange={(e) => setFamilyName(e.target.value)}
-                                    placeholder="Örn. Karayağız Ailesi"
-                                    minLength={2}
-                                    maxLength={100}
-                                    required
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-[#974CE0] mb-4"
-                                />
-
-                                <button
-                                    type="submit"
-                                    disabled={createFamilyMutation.isPending}
-                                    className="w-full bg-[#5A189A] text-white py-3 rounded-lg font-semibold hover:bg-[#240046] transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {createFamilyMutation.isPending && (
-                                        <Loader2 size={18} className="animate-spin" />
-                                    )}
-                                    Aile Oluştur
-                                </button>
-                            </form>
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="rounded-2xl border border-gray-100 bg-white p-7 shadow-sm md:p-8"
+                    >
+                        <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-100 text-[#5A189A]">
+                            <KeyRound size={27} />
                         </div>
 
-                        <div className="bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
-                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center mb-5">
-                                <KeyRound className="text-[#5A189A]" size={26} />
-                            </div>
+                        <h2 className="text-xl font-bold text-[#240046]">
+                            Davet Koduyla Katıl
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-gray-500">
+                            Bir aile yöneticisinden aldığın davet kodunu
+                            kullanarak mevcut bir aileye katıl.
+                        </p>
 
-                            <h3 className="text-xl font-bold text-[#240046]">
-                                Davet Koduyla Katıl
-                            </h3>
+                        <form onSubmit={handleJoinFamily} className="mt-7">
+                            <label className="mb-2 block text-sm font-semibold text-gray-700">
+                                Davet Kodu
+                            </label>
 
-                            <p className="text-sm text-gray-500 mt-2 mb-6">
-                                Bir aile yöneticisinden aldığın davet kodunu kullanarak
-                                mevcut bir aileye katıl.
-                            </p>
+                            <input
+                                type="text"
+                                value={inviteCode}
+                                onChange={(e) =>
+                                    setInviteCode(e.target.value.toUpperCase())
+                                }
+                                placeholder="Davet kodunu gir"
+                                maxLength={20}
+                                required
+                                className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm uppercase outline-none transition focus:border-[#974CE0] focus:bg-white focus:ring-4 focus:ring-purple-100"
+                            />
 
-                            <form onSubmit={handleJoinFamily}>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Davet Kodu
-                                </label>
-
-                                <input
-                                    type="text"
-                                    value={inviteCode}
-                                    onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-                                    placeholder="Davet kodunu gir"
-                                    maxLength={20}
-                                    required
-                                    className="w-full px-4 py-3 rounded-lg border border-gray-300 outline-none focus:ring-2 focus:ring-[#974CE0] mb-4 uppercase"
-                                />
-
-                                <button
-                                    type="submit"
-                                    disabled={joinFamilyMutation.isPending}
-                                    className="w-full bg-[#240046] text-white py-3 rounded-lg font-semibold hover:bg-[#5A189A] transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {joinFamilyMutation.isPending && (
-                                        <Loader2 size={18} className="animate-spin" />
-                                    )}
-                                    Aileye Katıl
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                )}
-            </main>
+                            <button
+                                type="submit"
+                                disabled={joinFamilyMutation.isPending}
+                                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#240046] py-3 font-semibold text-white transition hover:bg-[#5A189A] disabled:opacity-50"
+                            >
+                                {joinFamilyMutation.isPending && (
+                                    <Loader2 size={18} className="animate-spin" />
+                                )}
+                                Aileye Katıl
+                            </button>
+                        </form>
+                    </motion.div>
+                </section>
+            )}
         </div>
     );
 }
